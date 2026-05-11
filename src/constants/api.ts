@@ -1,6 +1,6 @@
 // API base URL - configure based on environment
-const env = import.meta.env as { VITE_API_BASE_URL?: string };
-export const API_BASE_URL = env.VITE_API_BASE_URL || 'http://localhost:3001';
+const env = import.meta.env as { VITE_API_URL?: string };
+export const API_BASE_URL = env.VITE_API_URL || 'http://localhost:3000';
 
 // API endpoints
 export const API_ENDPOINTS = {
