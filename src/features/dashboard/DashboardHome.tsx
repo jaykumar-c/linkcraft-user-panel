@@ -49,97 +49,80 @@ export function DashboardHome() {
       className="space-y-6"
     >
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Avatar className="h-14 w-14 border-2">
-            <AvatarImage src={profile?.avatarUrl || profile?.avatar_url || profile?.avatar || user?.avatarUrl || user?.avatar_url || user?.avatar || undefined} />
-            <AvatarFallback className={generateAvatarColor(user?.displayName || user?.display_name || 'U')}>
-              {getInitials(user?.displayName || user?.display_name || 'U')}
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <h1 className="text-xl font-bold">
-              Welcome back, {(user?.display_name || user?.displayName)?.split(' ')[0] || 'there'}!
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Here's what's happening with your profile
-            </p>
+      <div className="relative overflow-hidden rounded-3xl border-2 p-6 md:p-8" style={{ background: "linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.02))", borderColor: "hsl(var(--primary) / 0.2)" }}>
+        <div className="absolute top-0 right-0 w-48 h-48 rounded-full blur-3xl opacity-20" style={{ background: "hsl(var(--primary))", transform: "translate(30%, -30%)" }} />
+        <div className="relative flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Avatar className="h-14 w-14 border-2 border-background shadow-md">
+              <AvatarImage src={profile?.avatarUrl || profile?.avatar_url || profile?.avatar || user?.avatarUrl || user?.avatar_url || user?.avatar || undefined} />
+              <AvatarFallback className={generateAvatarColor(user?.displayName || user?.display_name || 'U')}>
+                {getInitials(user?.displayName || user?.display_name || 'U')}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-xl font-bold">
+                Welcome back, {(user?.display_name || user?.displayName)?.split(' ')[0] || 'there'}!
+              </h1>
+              <p className="text-sm text-muted-foreground">
+                Here's what's happening with your profile
+              </p>
+            </div>
           </div>
+          <Button asChild className="shadow-md" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.8))" }}>
+            <Link to="/dashboard/links">
+              <Plus className="mr-2 h-4 w-4" />
+              Add Link
+            </Link>
+          </Button>
         </div>
-        <Button asChild>
-          <Link to="/dashboard/links">
-            <Plus className="mr-2 h-4 w-4" />
-            Add Link
-          </Link>
-        </Button>
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="border-2">
-          <CardHeader className="py-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total Links</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {linksLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <div className="flex items-baseline gap-2">
-                <span className="text-2xl font-bold">{links.length}</span>
-                <span className="text-xs text-muted-foreground">({activeLinksCount} active)</span>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-2">
-          <CardHeader className="py-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Profile Views</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {analyticsLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <span className="text-2xl font-bold">{stats.totalViews.toLocaleString()}</span>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-2">
-          <CardHeader className="py-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Total Clicks</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            {analyticsLoading ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
-            ) : (
-              <span className="text-2xl font-bold">{stats.totalClicks.toLocaleString()}</span>
-            )}
-          </CardContent>
-        </Card>
-
-        <Card className="border-2">
-          <CardHeader className="py-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">AI Tokens Used</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <span className="text-2xl font-bold">{profile?.total_ai_tokens_used || profile?.totalAiTokensUsed || 0}</span>
-          </CardContent>
-        </Card>
-
-        <Card className="border-2">
-          <CardHeader className="py-3">
-            <CardTitle className="text-xs font-medium text-muted-foreground">Profile Complete</CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl font-bold">{profileCompletion()}%</span>
-              <div className="h-1.5 flex-1 bg-muted rounded-full overflow-hidden">
-                <div className="h-full bg-primary" style={{ width: `${profileCompletion()}%` }} />
-              </div>
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--primary) / 0.2)", background: "linear-gradient(135deg, hsl(var(--primary) / 0.05), hsl(var(--primary) / 0.02))" }}>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Total Links</p>
+          {linksLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <div className="flex items-baseline gap-2">
+              <span className="text-2xl font-bold" style={{ color: "hsl(var(--primary))" }}>{links.length}</span>
+              <span className="text-xs text-muted-foreground">({activeLinksCount} active)</span>
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
+
+        <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--accent) / 0.3)" }}>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Profile Views</p>
+          {analyticsLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <span className="text-2xl font-bold">{stats.totalViews.toLocaleString()}</span>
+          )}
+        </div>
+
+        <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--accent) / 0.3)" }}>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Total Clicks</p>
+          {analyticsLoading ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <span className="text-2xl font-bold">{stats.totalClicks.toLocaleString()}</span>
+          )}
+        </div>
+
+        <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--accent) / 0.3)" }}>
+          <p className="text-xs font-medium text-muted-foreground mb-1">AI Tokens</p>
+          <span className="text-2xl font-bold">{profile?.totalAiTokensUsed || profile?.total_ai_tokens_used || 0}</span>
+        </div>
+
+        <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--primary) / 0.2)", background: "linear-gradient(135deg, hsl(var(--primary) / 0.05), hsl(var(--primary) / 0.02))" }}>
+          <p className="text-xs font-medium text-muted-foreground mb-1">Profile Complete</p>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold" style={{ color: "hsl(var(--primary))" }}>{profileCompletion()}%</span>
+            <div className="h-2 flex-1 rounded-full overflow-hidden" style={{ backgroundColor: "hsl(var(--primary) / 0.15)" }}>
+              <div className="h-full rounded-full transition-all duration-500" style={{ width: `${profileCompletion()}%`, background: "linear-gradient(90deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))" }} />
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* Main Content */}

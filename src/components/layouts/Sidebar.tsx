@@ -55,13 +55,14 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           'fixed left-0 top-0 z-50 h-screen w-80 border-r bg-background p-6 transition-transform duration-300 lg:static lg:block lg:translate-x-0',
           !isOpen && '-translate-x-full lg:translate-x-0'
         )}
+        style={{ borderColor: "hsl(var(--primary) / 0.1)" }}
       >
         <div className="flex h-full flex-col">
           {/* Logo */}
           <div className="mb-8 flex items-center justify-between">
-            <Link to="/dashboard" className="flex items-center space-x-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-primary/60">
-                <span className="text-xl">🔗</span>
+            <Link to="/dashboard" className="flex items-center space-x-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl shadow-md" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.7))", boxShadow: "0 4px 12px hsl(var(--primary) / 0.3)" }}>
+                <span className="text-lg font-bold text-white">L</span>
               </div>
               <span className="text-xl font-bold">LinkCraft</span>
             </Link>
@@ -75,6 +76,9 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             </Button>
           </div>
 
+          {/* Nav label */}
+          <p className="text-xs font-semibold text-muted-foreground/60 uppercase tracking-wider mb-3 px-2">Menu</p>
+
           {/* Navigation */}
           <nav className="flex-1 space-y-1">
             {navigation.map((item) => {
@@ -85,10 +89,10 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                   to={item.href}
                   onClick={() => setIsOpen(false)}
                   className={cn(
-                    'flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm font-medium transition-colors',
+                    'flex items-center space-x-3 rounded-2xl px-4 py-3 text-sm font-medium transition-all duration-200 relative',
                     isActive
-                      ? 'bg-primary text-primary-foreground'
-                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                      ? 'bg-primary text-primary-foreground shadow-md'
+                      : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground hover:translate-x-0.5'
                   )}
                 >
                   <item.icon className="h-5 w-5" />
@@ -99,13 +103,13 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           </nav>
 
           {/* User section */}
-          <div className="border-t pt-6">
+          <div className="pt-4" style={{ borderTop: "1px solid hsl(var(--primary) / 0.1)" }}>
             <Link
               to="/dashboard/profile"
               onClick={() => setIsOpen(false)}
-              className="flex items-center space-x-3 mb-4 hover:bg-accent/50 p-2 rounded-xl -mx-2 transition-colors cursor-pointer"
+              className="flex items-center space-x-3 mb-3 hover:bg-accent/50 p-2 rounded-xl -mx-2 transition-all duration-200 cursor-pointer"
             >
-              <Avatar className="h-10 w-10">
+              <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm">
                 <AvatarImage src={profile?.avatarUrl || profile?.avatar_url || profile?.avatar || user?.avatarUrl || user?.avatar_url || user?.avatar || undefined} />
                 <AvatarFallback className={generateAvatarColor(profile?.displayName || profile?.display_name || user?.displayName || user?.display_name || 'User')}>
                   {getInitials(profile?.displayName || profile?.display_name || user?.displayName || user?.display_name || 'User')}
@@ -118,7 +122,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             </Link>
             <Button
               variant="ghost"
-              className="w-full justify-start"
+              className="w-full justify-start text-muted-foreground hover:text-destructive transition-colors"
               onClick={handleLogout}
               disabled={logout.isPending}
             >

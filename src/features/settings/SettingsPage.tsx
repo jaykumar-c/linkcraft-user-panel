@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion';
-import { Lock, Monitor, Moon, Sun, Loader2, Check } from 'lucide-react';
+import { Lock, Monitor, Moon, Sun, Loader2, Check, Smartphone, LogOut, Laptop } from 'lucide-react';
 import { useThemeStore, THEME_PALETTES } from '../../store/themeStore';
-import { useChangePassword } from '../../hooks/useSettings';
+import { useChangePassword, useSessions, useRevokeAllSessions } from '../../hooks/useSettings';
 import { Button } from '../../components/ui/button';
 import { Label } from '../../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -13,6 +13,8 @@ import { zodResolver } from '@hookform/resolvers/zod';
 export function SettingsPage() {
   const { theme, setTheme, palette, setPalette } = useThemeStore();
   const changePassword = useChangePassword();
+  const { data: sessions, isLoading: sessionsLoading } = useSessions();
+  const revokeAllSessions = useRevokeAllSessions();
 
   const {
     register,
@@ -224,6 +226,65 @@ export function SettingsPage() {
               )}
             </Button>
           </form>
+        </CardContent>
+      </Card>
+      {/* Sessions */}
+      <Card className="border-2">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Monitor className="h-5 w-5" />
+            Active Sessions
+          </CardTitle>
+          <CardDescription>Manage your active login sessions</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {sessionsLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin" />
+            </div>
+          ) : !sessions || sessions.length === 0 ? (
+            <p className="text-center text-muted-foreground py-4">No active sessions</p>
+          ) : (
+            <>
+              <div className="space-y-3">
+                {sessions.map((session: any) => (
+                  <div
+                    key={session.id}
+                    className="flex items-center gap-4 p-4 rounded-xl border-2"
+                    style={{ borderColor: "hsl(var(--primary) / 0.1)" }}
+                  >
+                    <div className="flex items-center justify-center w-10 h-10 rounded-xl" style={{ backgroundColor: "hsl(var(--primary) / 0.08)" }}>
+                      {session.deviceInfo?.toLowerCase().includes('mobile') ? (
+                        <Smartphone className="h-5 w-5" style={{ color: "hsl(var(--primary))" }} />
+                      ) : (
+                        <Laptop className="h-5 w-5" style={{ color: "hsl(var(--primary))" }} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{session.deviceInfo || 'Unknown device'}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {session.ipAddress || 'Unknown IP'} · {session.lastUsedAt ? new Date(parseInt(session.lastUsedAt) * 1000).toLocaleDateString() : 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <Button
+                variant="outline"
+                className="w-full gap-2"
+                onClick={() => revokeAllSessions.mutate()}
+                disabled={revokeAllSessions.isPending}
+                style={{ borderColor: "hsl(var(--destructive) / 0.3)", color: "hsl(var(--destructive))" }}
+              >
+                {revokeAllSessions.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <LogOut className="h-4 w-4" />
+                )}
+                Log Out Other Sessions
+              </Button>
+            </>
+          )}
         </CardContent>
       </Card>
     </motion.div>

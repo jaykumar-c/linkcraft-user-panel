@@ -68,9 +68,9 @@ export function ProfilePage() {
     }
   }, [profile, user, reset]);
 
-  watch(() => {
+  useEffect(() => {
     setHasChanges(isDirty);
-  });
+  }, [isDirty]);
 
   const onSubmit = async (data: UpdateProfileFormData) => {
     if (data.username && data.username !== usernameFromProfile && data.username.length >= 3 && !isUsernameAvailable) return;

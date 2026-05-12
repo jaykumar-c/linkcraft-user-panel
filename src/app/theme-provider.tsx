@@ -27,7 +27,7 @@ function hexToHsl(hex: string): string {
 
 const DEFAULT_PALETTES = {
   light: 'default',
-  dark: 'slateDark',
+  dark: 'midnight',
 };
 
 export function ThemeProvider({ children }: ThemeProviderProps) {

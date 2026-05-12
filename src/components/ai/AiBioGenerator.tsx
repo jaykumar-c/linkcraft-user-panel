@@ -1,28 +1,25 @@
-import { useState, useCallback } from "react";
-import { motion } from "framer-motion";
+import { useState, useCallback, useRef, useEffect } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
   Loader2,
   Copy,
-  RotateCw,
   Check,
   History,
-  Link2,
   Wand2,
-  MessageSquare,
+  ChevronDown,
+  ChevronUp,
+  Brain,
+  Zap,
+  Palette,
+  BookOpen,
+  Hash,
+  Quote,
+  RefreshCw,
 } from "lucide-react";
 import { useUpdateProfile } from "../../hooks/useProfile";
 import { Button } from "../../components/ui/button";
-import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "../../components/ui/card";
-import { Textarea } from "../../components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -32,28 +29,55 @@ import {
 } from "../../components/ui/select";
 import { Switch } from "../../components/ui/switch";
 import { copyToClipboard } from "../../lib/utils";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "../../components/ui/tabs";
 import { useQuery } from "@tanstack/react-query";
 import { generateBioStream, getAiHistory } from "../../services/ai-bio.service";
 
 const TONES = [
-  { value: "professional", label: "Professional" },
-  { value: "casual", label: "Casual" },
-  { value: "humorous", label: "Humorous" },
-  { value: "bold", label: "Bold" },
-  { value: "friendly", label: "Friendly" },
+  { value: "professional", label: "Professional", icon: BriefcaseIcon },
+  { value: "casual", label: "Casual", icon: MessageSquareIcon },
+  { value: "humorous", label: "Humorous", icon: SmileIcon },
+  { value: "bold", label: "Bold", icon: Zap },
+  { value: "friendly", label: "Friendly", icon: HeartIcon },
 ];
 
 const LENGTHS = [
-  { value: "short", label: "Short" },
-  { value: "medium", label: "Medium" },
-  { value: "long", label: "Long" },
+  { value: "short", label: "Short (~50 words)", icon: ChevronUp },
+  { value: "medium", label: "Medium (~100 words)", icon: ChevronDown },
+  { value: "long", label: "Long (~200 words)", icon: BookOpen },
 ];
+
+const SUGGESTIONS = [
+  "Creative designer & problem solver",
+  "Tech enthusiast building the future",
+  "Storyteller at heart, developer by trade",
+  "Turning coffee into code since 2020",
+  "Passionate about UX & accessibility",
+];
+
+function BriefcaseIcon() { return <span className="text-xs">💼</span>; }
+function MessageSquareIcon() { return <span className="text-xs">💬</span>; }
+function SmileIcon() { return <span className="text-xs">😊</span>; }
+function HeartIcon() { return <span className="text-xs">❤️</span>; }
+
+function LoadingDots() {
+  return (
+    <span className="inline-flex items-center gap-0.5">
+      {[0, 1, 2].map((i) => (
+        <span
+          key={i}
+          className="inline-block w-1.5 h-1.5 rounded-full bg-current animate-pulse"
+          style={{ animationDelay: `${i * 200}ms` }}
+        />
+      ))}
+    </span>
+  );
+}
+
+function TypingCursor() {
+  return (
+    <span className="inline-block w-0.5 h-4 bg-primary ml-0.5 animate-pulse" />
+  );
+}
 
 export function AiBioGenerator() {
   const [tone, setTone] = useState("professional");
@@ -62,23 +86,41 @@ export function AiBioGenerator() {
   const [includeLinks, setIncludeLinks] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [activeTab, setActiveTab] = useState<"generate" | "history">("generate");
 
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [generatedBio, setGeneratedBio] = useState("");
   const [lastPrompt, setLastPrompt] = useState("");
 
+  const outputRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
   const updateProfile = useUpdateProfile();
 
-  const handleGenerate = useCallback(
-async (e: React.FormEvent) => {
-    e.preventDefault();
-    const prompt = input.trim() || customPrompt.trim();
-    if (!prompt || isLoading) return;
+  useEffect(() => {
+    if (outputRef.current) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [generatedBio]);
 
-    setLastPrompt(prompt);
+  useEffect(() => {
+    if (!isLoading && generatedBio) {
+      inputRef.current?.focus();
+    }
+  }, [isLoading, generatedBio]);
+
+  const handleGenerate = useCallback(
+    async (e: React.FormEvent) => {
+      e.preventDefault();
+      const prompt = input.trim() || customPrompt.trim();
+      if (!prompt || isLoading) return;
+
+      setLastPrompt(prompt);
       setIsLoading(true);
       setGeneratedBio("");
+      setActiveTab("generate");
 
       try {
         await generateBioStream(
@@ -86,8 +128,7 @@ async (e: React.FormEvent) => {
           (content) => setGeneratedBio((prev) => prev + content),
           () => setIsLoading(false),
         );
-      } catch (error) {
-        console.error("[DEBUG] Generation error:", error);
+      } catch {
         setIsLoading(false);
       } finally {
         setInput("");
@@ -103,38 +144,18 @@ async (e: React.FormEvent) => {
 
   const cleanBioText = (text: string): string => {
     if (!text) return "";
-
     let cleaned = text;
-
-    // Remove quotes and extra whitespace at start/end
     cleaned = cleaned.replace(/^["']+|["']+$/g, "");
-
-    // Remove AI prefixes (case insensitive)
-    cleaned = cleaned.replace(
-      /^here'?s?\s*(a\s*)?(possible\s*)?bio:?[\s\n]*/i,
-      "",
-    );
+    cleaned = cleaned.replace(/^here'?s?\s*(a\s*)?(possible\s*)?bio:?[\s\n]*/i, "");
     cleaned = cleaned.replace(/^here'?s?\s*your\s*bio:?[\s\n]*/i, "");
-    cleaned = cleaned.replace(
-      /^here'?s?\s*\w+\s*bio\s*for\s*you:?[\s\n]*/i,
-      "",
-    );
     cleaned = cleaned.replace(/^sure[!,.]*\s*/i, "");
     cleaned = cleaned.replace(/^of\s*course[!,.]*\s*/i, "");
     cleaned = cleaned.replace(/^certainly[!,.]*\s*/i, "");
     cleaned = cleaned.replace(/^absolutely[!,.]*\s*/i, "");
     cleaned = cleaned.replace(/^no\s*problem[!,.]*\s*/i, "");
-
-    // Remove ending questions like "Would you like me to modify..."
     cleaned = cleaned.replace(/\n\nwould you like me to.*$/i, "");
-    cleaned = cleaned.replace(/\nwould you like.*$/i, "");
-    cleaned = cleaned.replace(/would you like me to.*$/i, "");
-
-    // Clean up extra whitespace and newlines
     cleaned = cleaned.replace(/\n{3,}/g, "\n\n");
-    cleaned = cleaned.trim();
-
-    return cleaned;
+    return cleaned.trim();
   };
 
   const handleCopy = useCallback(() => {
@@ -153,7 +174,6 @@ async (e: React.FormEvent) => {
 
   const handleSaveToProfile = useCallback(async () => {
     if (!generatedBio) return;
-
     const cleanedBio = cleanBioText(generatedBio);
     setIsSaving(true);
     try {
@@ -178,466 +198,380 @@ async (e: React.FormEvent) => {
     [updateProfile, refetchHistory],
   );
 
+  const generations = (Array.isArray(historyData)
+    ? historyData
+    : historyData?.data || historyData?.generations || []
+  ).filter((g: any) => !g.wasApplied);
+  const totalTokens = generations.reduce(
+    (sum: number, g: any) => sum + (g.tokensTotal || 0), 0,
+  );
+
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
-      className="max-w-3xl mx-auto space-y-6"
-    >
-      <div className="text-center space-y-2">
-        <div
-          className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-primary to-primary/60 shadow-lg"
-          style={{ boxShadow: "0 8px 32px hsl(var(--primary) / 0.25)" }}
-        >
-          <Sparkles className="w-8 h-8 text-primary-foreground" />
+    <div className="max-w-4xl mx-auto space-y-8">
+      {/* Hero Header */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden rounded-3xl border-2 p-8 md:p-10"
+        style={{
+          background: "linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.02))",
+          borderColor: "hsl(var(--primary) / 0.2)",
+        }}
+      >
+        <div className="absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-20" style={{ background: "hsl(var(--primary))", transform: "translate(30%, -30%)" }} />
+        <div className="absolute bottom-0 left-0 w-48 h-48 rounded-full blur-3xl opacity-10" style={{ background: "hsl(var(--primary))", transform: "translate(-20%, 20%)" }} />
+        <div className="relative flex items-start gap-6">
+          <div className="hidden sm:flex items-center justify-center w-16 h-16 rounded-2xl shrink-0" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))", boxShadow: "0 8px 32px hsl(var(--primary) / 0.3)" }}>
+            <Brain className="w-8 h-8 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-3xl md:text-4xl font-bold mb-2" style={{ color: "hsl(var(--primary))" }}>
+              AI Bio Generator
+            </h1>
+            <p className="text-muted-foreground text-base max-w-xl">
+              Create a compelling bio that captures your unique story. Describe yourself and let AI craft the perfect introduction.
+            </p>
+            <div className="flex flex-wrap gap-2 mt-4">
+              {SUGGESTIONS.slice(0, 3).map((s) => (
+                <button
+                  key={s}
+                  type="button"
+                  onClick={() => { setInput(s); inputRef.current?.focus(); }}
+                  className="px-3 py-1.5 text-xs rounded-full border transition-all hover:scale-105"
+                  style={{ borderColor: "hsl(var(--primary) / 0.3)", color: "hsl(var(--primary))", backgroundColor: "hsl(var(--primary) / 0.05)" }}
+                >
+                  {s}
+                </button>
+              ))}
+            </div>
+          </div>
         </div>
-        <h1
-          className="text-3xl font-bold"
-          style={{ color: "hsl(var(--primary))" }}
-        >
-          AI Bio Generator
-        </h1>
-        <p className="text-muted-foreground">
-          Create a compelling bio that captures your unique story
-        </p>
-      </div>
 
-      <Tabs defaultValue="generate" className="space-y-4">
-        <TabsList className="grid grid-cols-2 w-full max-w-xs mx-auto bg-secondary/50">
-          <TabsTrigger value="generate" className="gap-2">
-            <Wand2 className="h-4 w-4" />
-            Generate
-          </TabsTrigger>
-          <TabsTrigger value="history" className="gap-2">
-            <History className="h-4 w-4" />
-            History
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="generate" className="space-y-4">
-          <Card
-            className="border-2 shadow-lg"
-            style={{ boxShadow: "0 8px 32px hsl(var(--primary) / 0.1)" }}
+        {/* Tab Toggle */}
+        <div className="relative flex mt-6 p-1 rounded-2xl max-w-[280px]" style={{ backgroundColor: "hsl(var(--muted))" }}>
+          <button
+            onClick={() => setActiveTab("generate")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+              activeTab === "generate" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
           >
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <MessageSquare
-                  className="w-5 h-5"
-                  style={{ color: "hsl(var(--primary))" }}
-                />
-                Settings
-              </CardTitle>
-              <CardDescription>Customize your bio generation</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Tone</Label>
-                  <Select value={tone} onValueChange={setTone}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TONES.map((t) => (
-                        <SelectItem key={t.value} value={t.value}>
-                          {t.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-sm font-medium">Length</Label>
-                  <Select value={length} onValueChange={setLength}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {LENGTHS.map((l) => (
-                        <SelectItem key={l.value} value={l.value}>
-                          {l.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
+            <Wand2 className="w-4 h-4" />
+            Generate
+          </button>
+          <div className="w-px h-6 self-center" style={{ backgroundColor: "hsl(var(--primary) / 0.15)" }} />
+          <button
+            onClick={() => setActiveTab("history")}
+            className={`flex-1 flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-sm font-medium transition-all cursor-pointer ${
+              activeTab === "history" ? "bg-background shadow-sm text-foreground" : "text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            <History className="w-4 h-4" />
+            History
+            {generations.length > 0 && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{generations.length}</span>
+            )}
+          </button>
+        </div>
+      </motion.div>
 
-              <div
-                className="flex items-center justify-between p-3 rounded-xl border-2"
-                style={{ borderColor: "hsl(var(--border))" }}
+      <AnimatePresence mode="wait">
+        {activeTab === "generate" ? (
+          <motion.div
+            key="generate"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="space-y-6"
+          >
+            {/* Settings Collapsible */}
+            <div className="rounded-2xl border-2 overflow-hidden" style={{ borderColor: "hsl(var(--border))" }}>
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                className="w-full flex items-center justify-between p-4 text-left hover:bg-accent/30 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <Link2
-                    className="h-5 w-5"
-                    style={{ color: "hsl(var(--primary))" }}
-                  />
-                  <div>
-                    <p className="text-sm font-medium">Include My Links</p>
-                    <p className="text-xs text-muted-foreground">
-                      Add your profile links to the bio
-                    </p>
+                  <div className="flex items-center justify-center w-8 h-8 rounded-lg" style={{ backgroundColor: "hsl(var(--primary) / 0.1)" }}>
+                    <Palette className="w-4 h-4" style={{ color: "hsl(var(--primary))" }} />
                   </div>
+                  <span className="font-medium">Generation Settings</span>
                 </div>
-                <Switch
-                  checked={includeLinks}
-                  onCheckedChange={setIncludeLinks}
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label className="text-sm font-medium">
-                  Custom Prompt (optional)
-                </Label>
-                <Textarea
-                  placeholder="Or write your own prompt..."
-                  value={customPrompt}
-                  onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) =>
-                    setCustomPrompt(e.target.value)
-                  }
-                  rows={2}
-                  className="resize-none"
-                />
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card
-            className="border-2 shadow-lg"
-            style={{ boxShadow: "0 8px 32px hsl(var(--primary) / 0.1)" }}
-          >
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2">
-                <Sparkles
-                  className="w-5 h-5"
-                  style={{ color: "hsl(var(--primary))" }}
-                />
-                Generate Your Bio
-              </CardTitle>
-              <CardDescription>
-                Enter keywords or describe yourself
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {/* Chat Messages - Show as proper cards */}
-              <div className="space-y-3 max-h-[250px] overflow-y-auto pr-2">
-                {!generatedBio && !isLoading && (
-                  <div className="text-center py-6 px-4 rounded-xl bg-secondary/20">
-                    <Sparkles
-                      className="w-10 h-10 mx-auto mb-3 opacity-40"
-                      style={{ color: "hsl(var(--primary))" }}
-                    />
-                    <p className="text-sm text-muted-foreground">
-                      Describe yourself or enter keywords to generate your bio
-                    </p>
-                  </div>
-                )}
-
-                {/* Show complete AI response as a proper card */}
-                {generatedBio && (
+                {showSettings ? <ChevronUp className="w-4 h-4 text-muted-foreground" /> : <ChevronDown className="w-4 h-4 text-muted-foreground" />}
+              </button>
+              <AnimatePresence>
+                {showSettings && (
                   <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="flex justify-start"
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden"
                   >
-                    <div
-                      className="w-full rounded-xl overflow-hidden border-2"
-                      style={{
-                        backgroundColor: "hsl(var(--primary) / 0.05)",
-                        borderColor: "hsl(var(--primary) / 0.3)",
-                      }}
-                    >
-                      <div
-                        className="px-4 py-2 border-b flex items-center gap-2"
-                        style={{ borderColor: "hsl(var(--border))" }}
-                      >
-                        <Sparkles
-                          className="w-4 h-4"
-                          style={{ color: "hsl(var(--primary))" }}
-                        />
-                        <span
-                          className="text-sm font-medium"
-                          style={{ color: "hsl(var(--primary))" }}
-                        >
-                          Generated Bio
-                        </span>
-                        {generatedBio.length > 0 && (
-                          <span className="text-xs text-muted-foreground ml-auto">
-                            {generatedBio.length} chars
-                          </span>
-                        )}
+                    <div className="p-4 pt-0 border-t space-y-4" style={{ borderColor: "hsl(var(--border))" }}>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Tone</Label>
+                          <Select value={tone} onValueChange={setTone}>
+                            <SelectTrigger className="h-11">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {TONES.map((t) => (
+                                <SelectItem key={t.value} value={t.value}>
+                                  <span className="flex items-center gap-2">
+                                    <t.icon />
+                                    {t.label}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div className="space-y-2">
+                          <Label className="text-sm font-medium">Length</Label>
+                          <Select value={length} onValueChange={setLength}>
+                            <SelectTrigger className="h-11">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {LENGTHS.map((l) => (
+                                <SelectItem key={l.value} value={l.value}>
+                                  <span className="flex items-center gap-2">
+                                    <l.icon className="w-4 h-4" />
+                                    {l.label}
+                                  </span>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
-                      {generatedBio.length > 0 ? (
-                        <div className="p-4">
-                          <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                            {generatedBio}
-                          </p>
+                      <div className="flex items-center justify-between p-3 rounded-xl border" style={{ borderColor: "hsl(var(--border))" }}>
+                        <div className="flex items-center gap-3">
+                          <Hash className="w-4 h-4 text-muted-foreground" />
+                          <div>
+                            <p className="text-sm font-medium">Include My Links</p>
+                            <p className="text-xs text-muted-foreground">Add your profile links to the bio</p>
+                          </div>
                         </div>
-                      ) : (
-                        <div className="p-4 flex items-center justify-center">
-                          <Loader2 className="w-5 h-5 animate-spin mr-2" />
-                          <span className="text-sm text-muted-foreground">
-                            Generating...
-                          </span>
-                        </div>
-                      )}
-                      <div
-                        className="px-4 py-3 border-t flex gap-2"
-                        style={{ borderColor: "hsl(var(--border))" }}
-                      >
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleCopy}
-                          className="flex-1 gap-2"
-                        >
-                          {copied ? (
-                            <Check className="w-4 h-4" />
-                          ) : (
-                            <Copy className="w-4 h-4" />
-                          )}
-                          {copied ? "Copied!" : "Copy"}
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={handleRegenerate}
-                          className="flex-1 gap-2"
-                        >
-                          <RotateCw className="w-4 h-4" />
-                          Regenerate
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={handleSaveToProfile}
-                          disabled={isSaving || updateProfile.isPending}
-                          className="flex-1 gap-2"
-                        >
-                          {isSaving || updateProfile.isPending ? (
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                          ) : (
-                            <Check className="w-4 h-4" />
-                          )}
-                          Save
-                        </Button>
+                        <Switch checked={includeLinks} onCheckedChange={setIncludeLinks} />
+                      </div>
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Custom Prompt (optional)</Label>
+                        <textarea
+                          placeholder="Add specific instructions for the AI..."
+                          value={customPrompt}
+                          onChange={(e) => setCustomPrompt(e.target.value)}
+                          rows={2}
+                          className="w-full rounded-xl border-2 bg-background px-4 py-3 text-sm resize-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                          style={{ borderColor: "hsl(var(--border))" }}
+                        />
                       </div>
                     </div>
                   </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Generation Area */}
+            <div className="rounded-2xl border-2 overflow-hidden" style={{ borderColor: "hsl(var(--border))" }}>
+              {/* Output Area */}
+              <div
+                ref={outputRef}
+                className="p-6 min-h-[200px] max-h-[350px] overflow-y-auto scroll-smooth"
+                style={{ backgroundColor: "hsl(var(--primary) / 0.02)" }}
+              >
+                {!generatedBio && !isLoading && (
+                  <div className="flex flex-col items-center justify-center h-full min-h-[160px] text-center">
+                    <div className="flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style={{ backgroundColor: "hsl(var(--primary) / 0.08)" }}>
+                      <Quote className="w-6 h-6" style={{ color: "hsl(var(--primary))" }} />
+                    </div>
+                    <p className="text-muted-foreground text-sm max-w-sm">
+                      Describe yourself below and I'll craft a unique bio for you
+                    </p>
+                    <div className="flex flex-wrap gap-1.5 mt-3">
+                      {SUGGESTIONS.map((s) => (
+                        <button
+                          key={s}
+                          type="button"
+                          onClick={() => { setInput(s); inputRef.current?.focus(); }}
+                          className="px-2 py-1 text-xs rounded-md border text-muted-foreground hover:text-foreground transition-colors"
+                        >
+                          {s.length > 30 ? s.slice(0, 30) + "..." : s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 )}
 
                 {isLoading && !generatedBio && (
+                  <div className="flex items-center gap-3 py-4">
+                    <div className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))" }}>
+                      <Brain className="w-5 h-5 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium" style={{ color: "hsl(var(--primary))" }}>
+                        AI is thinking
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Crafting your perfect bio<LoadingDots />
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {generatedBio && (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="flex justify-start"
+                    className="prose prose-sm max-w-none"
                   >
-                    <div className="bg-secondary/50 dark:bg-secondary/30 rounded-2xl rounded-bl-md border-2 px-4 py-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Sparkles
-                          className="w-3 h-3 animate-pulse"
-                          style={{ color: "hsl(var(--primary))" }}
-                        />
-                        <span
-                          className="text-xs font-medium"
-                          style={{ color: "hsl(var(--primary))" }}
-                        >
-                          AI
-                        </span>
+                    <div className="flex items-center gap-2 mb-4 pb-3 border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                      <div className="flex items-center justify-center w-7 h-7 rounded-lg" style={{ backgroundColor: "hsl(var(--primary) / 0.1)" }}>
+                        <Sparkles className="w-3.5 h-3.5" style={{ color: "hsl(var(--primary))" }} />
                       </div>
-                      <div className="flex items-center gap-1">
-                        <span
-                          className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
-                          style={{ animationDelay: "0ms" }}
-                        />
-                        <span
-                          className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
-                          style={{ animationDelay: "150ms" }}
-                        />
-                        <span
-                          className="w-2 h-2 rounded-full bg-muted-foreground/40 animate-bounce"
-                          style={{ animationDelay: "300ms" }}
-                        />
-                      </div>
+                      <span className="text-sm font-medium">Generated Bio</span>
+                      <span className="text-xs text-muted-foreground ml-auto">{generatedBio.length} chars</span>
                     </div>
+                    <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                      {generatedBio}
+                      {isLoading && <TypingCursor />}
+                    </p>
                   </motion.div>
                 )}
               </div>
 
-              {/* Input Form */}
-              <form onSubmit={handleGenerate} className="flex gap-2">
-                <Input
-                  placeholder="e.g., UI designer, developer..."
-                  value={input}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                    setInput(e.target.value)
-                  }
-                  disabled={isLoading}
-                  className="text-lg h-12"
-                />
-                <Button
-                  type="submit"
-                  disabled={isLoading}
-                  className="h-12 px-4"
-                >
-                  {isLoading ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    <Sparkles className="h-5 w-5" />
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="history" className="space-y-4">
-          {(() => {
-            const generations = Array.isArray(historyData)
-              ? historyData
-              : historyData?.data || historyData?.generations || [];
-            const totalTokens = generations.reduce(
-              (sum: number, g: any) => sum + (g.tokensTotal || 0),
-              0,
-            );
-            const totalBios = generations.filter((g: any) => g.response).length;
-
-            return (
-              <Card
-                className="border-2 shadow-lg"
-                style={{ boxShadow: "0 8px 32px hsl(var(--primary) / 0.1)" }}
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <History
-                          className="w-5 h-5"
-                          style={{ color: "hsl(var(--primary))" }}
-                        />
-                        Generation History
-                      </CardTitle>
-                      <CardDescription>
-                        View your past AI-generated bios
-                      </CardDescription>
+              {/* Actions Bar */}
+              <AnimatePresence>
+                {generatedBio && !isLoading && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="border-t overflow-hidden" style={{ borderColor: "hsl(var(--border))" }}
+                  >
+                    <div className="flex gap-2 p-3 bg-accent/20">
+                      <Button variant="outline" size="sm" onClick={handleCopy} className="flex-1 gap-1.5 h-9">
+                        {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        {copied ? "Copied!" : "Copy"}
+                      </Button>
+                      <Button variant="outline" size="sm" onClick={handleRegenerate} className="flex-1 gap-1.5 h-9">
+                        <RefreshCw className="w-4 h-4" />
+                        Regenerate
+                      </Button>
+                      <Button size="sm" onClick={handleSaveToProfile} disabled={isSaving || updateProfile.isPending} className="flex-1 gap-1.5 h-9">
+                        {isSaving || updateProfile.isPending ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Check className="w-4 h-4" />
+                        )}
+                        Save to Profile
+                      </Button>
                     </div>
-                    {totalTokens > 0 && (
-                      <div className="text-right">
-                        <p
-                          className="text-2xl font-bold"
-                          style={{ color: "hsl(var(--primary))" }}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              {/* Input Form */}
+              <div className="border-t p-4" style={{ borderColor: "hsl(var(--border))" }}>
+                <form onSubmit={handleGenerate} className="flex gap-2">
+                  <input
+                    ref={inputRef}
+                    placeholder="Describe yourself — e.g., UI designer, developer..."
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    disabled={isLoading}
+                    className="flex-1 h-12 px-4 rounded-xl border-2 bg-background text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                    style={{ borderColor: "hsl(var(--border))" }}
+                  />
+                  <Button type="submit" disabled={isLoading} className="h-12 px-5 gap-2 shrink-0">
+                    {isLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      <Zap className="h-5 w-5" />
+                    )}
+                    <span className="hidden sm:inline">Generate</span>
+                  </Button>
+                </form>
+              </div>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="history"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="space-y-4"
+          >
+            {/* Stats Bar */}
+            {generations.length > 0 && (
+              <div className="flex gap-4 flex-wrap">
+                <div className="flex-1 min-w-[120px] rounded-xl border-2 p-4" style={{ borderColor: "hsl(var(--border))" }}>
+                  <p className="text-2xl font-bold" style={{ color: "hsl(var(--primary))" }}>{generations.length}</p>
+                  <p className="text-xs text-muted-foreground">Generations</p>
+                </div>
+                <div className="flex-1 min-w-[120px] rounded-xl border-2 p-4" style={{ borderColor: "hsl(var(--border))" }}>
+                  <p className="text-2xl font-bold" style={{ color: "hsl(var(--primary))" }}>{totalTokens.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Tokens Used</p>
+                </div>
+              </div>
+            )}
+
+            {generations.length > 0 ? (
+              <div className="space-y-3">
+                {generations.map((gen: any, i: number) => (
+                  <motion.div
+                    key={gen.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                    className="rounded-xl border-2 overflow-hidden transition-all hover:shadow-md"
+                    style={{ borderColor: "hsl(var(--border))" }}
+                  >
+                    <div className="px-4 py-2.5 border-b flex items-center justify-between" style={{ borderColor: "hsl(var(--border))" }}>
+                      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <span>{new Date(parseInt(gen.createdAt) * 1000).toLocaleDateString()}</span>
+                        <span>·</span>
+                        <span>{gen.model || "AI"}</span>
+                        <span>·</span>
+                        <span>{gen.tokensTotal || 0} tokens</span>
+                      </div>
+                    </div>
+                    <div className="p-4">
+                      <p className="whitespace-pre-wrap text-sm leading-relaxed line-clamp-3">{gen.response}</p>
+                    </div>
+                    {gen.response && (
+                      <div className="px-4 py-3 border-t" style={{ borderColor: "hsl(var(--border))" }}>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleApplyFromHistory(gen.response)}
+                          disabled={isSaving}
+                          className="w-full gap-1.5"
                         >
-                          {totalTokens}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          Total Tokens
-                        </p>
+                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          Apply to Profile
+                        </Button>
                       </div>
                     )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  {generations.length > 0 ? (
-                    <div className="space-y-4">
-                      {generations.map((gen: any) => (
-                        <motion.div
-                          key={gen.id}
-                          initial={{ opacity: 0 }}
-                          animate={{ opacity: 1 }}
-                          className="rounded-xl border-2 overflow-hidden"
-                          style={{
-                            backgroundColor: gen.wasApplied
-                              ? "hsl(var(--primary) / 0.05)"
-                              : "transparent",
-                            borderColor: "hsl(var(--border))",
-                          }}
-                        >
-                          <div
-                            className="px-4 py-2 border-b flex items-center justify-between"
-                            style={{ borderColor: "hsl(var(--border))" }}
-                          >
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(
-                                parseInt(gen.createdAt) * 1000,
-                              ).toLocaleDateString()}{" "}
-                              · {gen.model}
-                            </span>
-                            <div className="flex items-center gap-2">
-                              {gen.wasApplied && (
-                                <span className="text-xs px-2 py-1 rounded-full bg-green-500/20 text-green-600 dark:text-green-400">
-                                  <Check className="w-3 h-3 inline mr-1" />
-                                  Applied
-                                </span>
-                              )}
-                              <span className="text-xs text-muted-foreground">
-                                {gen.tokensTotal || 0} tokens
-                              </span>
-                            </div>
-                          </div>
-                          <div className="p-4">
-                            <p className="whitespace-pre-wrap text-sm leading-relaxed">
-                              {gen.response}
-                            </p>
-                          </div>
-                          {!gen.wasApplied && (
-                            <div
-                              className="px-4 py-3 border-t"
-                              style={{ borderColor: "hsl(var(--border))" }}
-                            >
-                              <Button
-                                variant="default"
-                                size="sm"
-                                onClick={() =>
-                                  handleApplyFromHistory(gen.response)
-                                }
-                                disabled={isSaving}
-                                className="w-full gap-2"
-                              >
-                                {isSaving ? (
-                                  <Loader2 className="w-4 h-4 animate-spin" />
-                                ) : (
-                                  <Check className="w-4 h-4" />
-                                )}
-                                Apply to Profile
-                              </Button>
-                            </div>
-                          )}
-                        </motion.div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="text-center py-12">
-                      <div
-                        className="inline-flex items-center justify-center w-16 h-16 rounded-full mx-auto mb-4"
-                        style={{ backgroundColor: "hsl(var(--primary) / 0.1)" }}
-                      >
-                        <History
-                          className="w-8 h-8"
-                          style={{ color: "hsl(var(--primary))" }}
-                        />
-                      </div>
-                      <p className="text-muted-foreground">
-                        No generation history yet
-                      </p>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Start generating to see your bios here
-                      </p>
-                    </div>
-                  )}
-                  {totalBios > 0 && (
-                    <div className="mt-4 pt-4 border-t">
-                      <div className="flex justify-between text-sm">
-                        <span>Total Bios Generated:</span>
-                        <span className="font-medium">{totalBios}</span>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            );
-          })()}
-        </TabsContent>
-      </Tabs>
-    </motion.div>
+                  </motion.div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-16 rounded-2xl border-2" style={{ borderColor: "hsl(var(--border))" }}>
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ backgroundColor: "hsl(var(--primary) / 0.08)" }}>
+                  <History className="w-8 h-8" style={{ color: "hsl(var(--primary))" }} />
+                </div>
+                <p className="text-muted-foreground">No generation history yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Start generating to see your bios here</p>
+                <Button variant="outline" className="mt-4 gap-2" onClick={() => setActiveTab("generate")}>
+                  <Wand2 className="w-4 h-4" />
+                  Generate Your First Bio
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
