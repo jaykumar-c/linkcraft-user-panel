@@ -3,11 +3,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Camera, Loader2, Save, CalendarClock, User, Link as LinkIcon, Mail, CreditCard, Eye, Sparkles } from 'lucide-react';
+import { Camera, Loader2, Save, CalendarClock, User, Link as LinkIcon, Mail, CreditCard, Eye, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
 import { updateProfileSchema, type UpdateProfileFormData } from '../../schemas/profile.schema';
-import { useProfile } from '../../hooks/useProfile';
-import { useUpdateProfile } from '../../hooks/useProfile';
-import { useUploadAvatar } from '../../hooks/useProfile';
+import { useProfile, useUpdateProfile, useUploadAvatar } from '../../hooks/useProfile';
+import { useUsernameCheck } from '../../hooks/useUsernameCheck';
 import { useAuthStore } from '../../store/authStore';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -34,7 +33,7 @@ export function ProfilePage() {
     }
   };
 
-  const lastLoginAt = profile?.last_login_at || user?.last_login_at;
+  const lastLoginAt = profile?.lastLoginAt || profile?.last_login_at || user?.lastLoginAt || user?.last_login_at;
 
   const {
     register,
@@ -52,12 +51,18 @@ export function ProfilePage() {
     },
   });
 
+  const watchedUsername = watch('username');
+  const usernameFromProfile = profile?.username || user?.username || '';
+  const { isChecking: isCheckingUsername, isAvailable: isUsernameAvailable, message: usernameMessage } = useUsernameCheck(
+    watchedUsername && watchedUsername !== usernameFromProfile ? watchedUsername : ''
+  );
+
   useEffect(() => {
     if (profile) {
       reset({
-        displayName: profile.display_name || user?.display_name || user?.displayName || '',
+        displayName: profile.displayName || profile.display_name || user?.displayName || user?.display_name || '',
         username: profile.username || user?.username || '',
-        bio: profile.bio_text || profile.bio || user?.bio_text || user?.bio || '',
+        bio: profile.bioText || profile.bio_text || profile.bio || user?.bioText || user?.bio_text || user?.bio || '',
         profession: profile.profession || user?.profession || '',
       });
     }
@@ -68,6 +73,7 @@ export function ProfilePage() {
   });
 
   const onSubmit = async (data: UpdateProfileFormData) => {
+    if (data.username && data.username !== usernameFromProfile && data.username.length >= 3 && !isUsernameAvailable) return;
     const updateData: any = {};
     if (data.displayName) updateData.displayName = data.displayName;
     if (data.username) updateData.username = data.username;
@@ -136,9 +142,9 @@ export function ProfilePage() {
           
           <div className="inline-flex relative">
             <Avatar className="h-28 w-28 border-4 border-background shadow-lg">
-              <AvatarImage src={profile?.avatar_url || profile?.avatar || user?.avatar_url || user?.avatar || undefined} />
-              <AvatarFallback className={generateAvatarColor(profile?.display_name || profile?.displayName || user?.display_name || user?.displayName || 'U')}>
-                {getInitials(profile?.display_name || profile?.displayName || user?.display_name || user?.displayName || 'U')}
+              <AvatarImage src={profile?.avatarUrl || profile?.avatar_url || profile?.avatar || user?.avatarUrl || user?.avatar_url || user?.avatar || undefined} />
+              <AvatarFallback className={generateAvatarColor(profile?.displayName || profile?.display_name || user?.displayName || user?.display_name || 'U')}>
+                {getInitials(profile?.displayName || profile?.display_name || user?.displayName || user?.display_name || 'U')}
               </AvatarFallback>
             </Avatar>
             <label
@@ -162,7 +168,7 @@ export function ProfilePage() {
           </div>
           
           <div className="mt-4">
-            <p className="text-xl font-semibold">{profile?.display_name || user?.display_name || user?.displayName || 'Your Name'}</p>
+            <p className="text-xl font-semibold">{profile?.displayName || profile?.display_name || user?.displayName || user?.display_name || 'Your Name'}</p>
             <p className="text-muted-foreground">@{profile?.username || user?.username || 'username'}</p>
           </div>
         </div>
@@ -195,15 +201,37 @@ export function ProfilePage() {
                 <span className="h-11 flex items-center rounded-l-xl border border-r-0 border-input bg-muted px-3 text-sm text-muted-foreground">
                   linkcraft.ai/
                 </span>
-                <Input
-                  id="username"
-                  placeholder="username"
-                  {...register('username')}
-                  className={`h-11 rounded-l-none ${errors.username ? 'border-destructive' : ''}`}
-                />
+                <div className="relative flex-1">
+                  <Input
+                    id="username"
+                    placeholder="username"
+                    {...register('username')}
+                    className={`h-11 rounded-l-none ${errors.username ? 'border-destructive' : ''}`}
+                  />
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                    {isCheckingUsername && (
+                      <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                    )}
+                    {!isCheckingUsername && watchedUsername && watchedUsername !== usernameFromProfile && watchedUsername.length >= 3 && isUsernameAvailable && (
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    )}
+                    {!isCheckingUsername && watchedUsername && watchedUsername !== usernameFromProfile && watchedUsername.length >= 3 && !isUsernameAvailable && usernameMessage && (
+                      <XCircle className="h-4 w-4 text-destructive" />
+                    )}
+                  </div>
+                </div>
               </div>
               {errors.username && (
                 <p className="text-xs text-destructive">{errors.username.message}</p>
+              )}
+              {!errors.username && watchedUsername && watchedUsername !== usernameFromProfile && watchedUsername.length >= 3 && usernameMessage && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className={`text-xs ${isUsernameAvailable ? 'text-green-500' : 'text-destructive'}`}
+                >
+                  {usernameMessage}
+                </motion.p>
               )}
             </div>
           </div>
@@ -305,7 +333,7 @@ export function ProfilePage() {
               <Eye className="h-5 w-5" />
               <span>Profile Views</span>
             </div>
-            <span className="font-medium">{user?.total_profile_views || 0}</span>
+            <span className="font-medium">{profile?.totalProfileViews || profile?.total_profile_views || user?.totalProfileViews || user?.total_profile_views || 0}</span>
           </div>
           
           <div className="flex items-center justify-between py-3">

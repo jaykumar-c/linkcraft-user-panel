@@ -2,11 +2,60 @@
 <html lang="en" class="light">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>LinkCraft AI</title>
+    
+    <!-- Security Headers -->
+    <meta http-equiv="X-Content-Type-Options" content="nosniff" />
+    <meta http-equiv="X-Frame-Options" content="DENY" />
+    <meta http-equiv="Referrer-Policy" content="strict-origin-when-cross-origin" />
+    <meta http-equiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
+    
+    <!-- Content Security Policy - Adjust based on your needs -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; frame-ancestors 'none';" />
+    
+    <!-- SEO Meta Tags -->
+    <title>LinkCraft AI - Smart Link Management Platform</title>
+    <meta name="description" content="LinkCraft AI is an intelligent link management platform that helps you organize, track, and optimize your links with AI-powered bio generation." />
+    <meta name="keywords" content="link management, bio generator, link in bio, smart links, AI-powered links" />
+    <meta name="author" content="LinkCraft AI" />
+    <meta name="robots" content="index, follow" />
+    <meta name="googlebot" content="index, follow" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://linkcraft.ai/" />
+    <meta property="og:title" content="LinkCraft AI - Smart Link Management Platform" />
+    <meta property="og:description" content="Organize, track, and optimize your links with AI-powered bio generation." />
+    <meta property="og:image" content="/og-image.png" />
+    <meta property="og:site_name" content="LinkCraft AI" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:url" content="https://linkcraft.ai/" />
+    <meta name="twitter:title" content="LinkCraft AI - Smart Link Management Platform" />
+    <meta name="twitter:description" content="Organize, track, and optimize your links with AI-powered bio generation." />
+    <meta name="twitter:image" content="/og-image.png" />
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.json" />
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#6366f1" />
+    <meta name="msapplication-TileColor" content="#6366f1" />
+    
+    <!-- Preconnect to external origins -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   </head>
   <body>
+    <noscript>
+      <div style="padding: 20px; text-align: center; font-family: sans-serif;">
+        Please enable JavaScript to use LinkCraft AI.
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

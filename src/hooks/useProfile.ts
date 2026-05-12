@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useToast } from './use-toast';
 import * as profileApi from '../services/profile.service';
 import { useAuthStore } from '../store/authStore';
-import type { UpdateProfileRequest } from '../types';
+import type { UpdateProfileRequest, User } from '../types';
 
 // Get profile hook
 export const useProfile = () => {
@@ -42,7 +42,7 @@ export const useUpdateProfile = () => {
   });
 };
 
-// Upload avatar hook - uses Cloudinary storage API
+// Upload avatar hook
 export const useUploadAvatar = () => {
   const setUser = useAuthStore((state) => state.setUser);
   const { toast } = useToast();
@@ -50,10 +50,15 @@ export const useUploadAvatar = () => {
 
   return useMutation({
     mutationFn: async (file: File) => {
-      // Upload to Cloudinary
+      const cachedProfile = queryClient.getQueryData<User>(['profile']);
+      const avatarMediaId = cachedProfile?.avatarMediaId;
+
+      if (avatarMediaId) {
+        await profileApi.deleteAvatar(avatarMediaId);
+      }
+
       const result = await profileApi.uploadAvatar(file);
-      // Update profile with avatar_url
-      await profileApi.updateProfile({ avatar_url: result.avatar });
+      await profileApi.updateProfile({ avatar_url: result.uploadId });
       return result;
     },
     onSuccess: (data) => {

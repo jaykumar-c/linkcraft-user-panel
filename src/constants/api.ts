@@ -1,6 +1,6 @@
 // API base URL - configure based on environment
 const env = import.meta.env as { VITE_API_URL?: string };
-export const API_BASE_URL = env.VITE_API_URL || "http://localhost:3000";
+export const API_BASE_URL = (env.VITE_API_URL || "http://localhost:3000").replace(/\/+$/, '');
 
 // API endpoints
 export const API_ENDPOINTS = {
@@ -12,7 +12,11 @@ export const API_ENDPOINTS = {
     REFRESH: "/auth/refresh",
     FORGOT_PASSWORD: "/auth/forgot-password",
     RESET_PASSWORD: "/auth/reset-password",
+    CHANGE_PASSWORD: "/auth/change-password",
     VERIFY_EMAIL: "/auth/verify-email",
+    CHECK_USERNAME: "/auth/check-username",
+    LOGOUT_ALL: "/auth/logout/all",
+    SESSIONS: "/auth/sessions",
   },
   // Profile endpoints
   PROFILE: {
@@ -35,9 +39,9 @@ export const API_ENDPOINTS = {
   },
   // AI Bio endpoints
   AI_BIO: {
-    GENERATE: API_BASE_URL + "api/v1/ai/generate",
-    HISTORY: API_BASE_URL + "api/v1/ai/history",
-    APPLY: API_BASE_URL + "api/v1/ai/apply",
+    GENERATE: "/ai/generate",
+    HISTORY: "/ai/history",
+    APPLY: "/ai/apply",
   },
   // Analytics endpoints
   ANALYTICS: {
@@ -51,14 +55,14 @@ export const API_ENDPOINTS = {
   },
   // Settings endpoints
   SETTINGS: {
-    PROFILE: "/settings/profile",
-    PASSWORD: "/settings/password",
-    SESSIONS: "/settings/sessions",
+    PROFILE: "/users/profile",
+    PASSWORD: "/auth/change-password",
+    SESSIONS: "/auth/sessions",
     DELETE_ACCOUNT: "/settings/account",
   },
   // Auth endpoints for logout all
   AUTH_LOGOUT: {
-    LOGOUT_ALL: "/auth/logout-all",
+    LOGOUT_ALL: "/auth/logout/all",
   },
   // Storage endpoints
   STORAGE: {

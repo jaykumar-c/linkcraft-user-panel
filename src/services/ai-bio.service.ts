@@ -1,5 +1,5 @@
 import axiosInstance from "../lib/axios";
-import { API_ENDPOINTS } from "../constants/api";
+import { API_BASE_URL, API_ENDPOINTS } from "../constants/api";
 
 export const generateBioStream = async (
   data: {
@@ -13,7 +13,7 @@ export const generateBioStream = async (
 ): Promise<void> => {
   const token = sessionStorage.getItem("accessToken");
 
-  const response = await fetch(API_ENDPOINTS.AI_BIO.GENERATE, {
+  const response = await fetch(`${API_BASE_URL}${API_ENDPOINTS.AI_BIO.GENERATE}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -51,7 +51,7 @@ export const generateBioStream = async (
 
 export const getAiHistory = async (): Promise<any> => {
   const response = await axiosInstance.get(API_ENDPOINTS.AI_BIO.HISTORY);
-  return response.data;
+  return response.data.data;
 };
 
 export const applyBioToProfile = async (

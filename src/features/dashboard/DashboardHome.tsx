@@ -21,7 +21,11 @@ export function DashboardHome() {
   const { data: analytics, isLoading: analyticsLoading } = useAnalyticsOverview();
   const { data: profile } = useProfile();
 
-  const stats = analytics || { totalViews: 0, totalClicks: 0, clickRate: 0 };
+  const stats = {
+    totalViews: analytics?.totalViews ?? (analytics as any)?.total_views ?? 0,
+    totalClicks: analytics?.totalClicks ?? (analytics as any)?.total_clicks ?? 0,
+    clickRate: analytics?.clickRate ?? (analytics as any)?.click_rate ?? 0,
+  };
   
   const links: any[] = (linksData as any)?.links || (Array.isArray(linksData) ? linksData : []);
 
@@ -48,9 +52,9 @@ export function DashboardHome() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
           <Avatar className="h-14 w-14 border-2">
-            <AvatarImage src={profile?.avatar_url || profile?.avatar || user?.avatar_url || user?.avatar || undefined} />
-            <AvatarFallback className={generateAvatarColor(user?.display_name || user?.displayName || 'U')}>
-              {getInitials(user?.display_name || user?.displayName || 'U')}
+            <AvatarImage src={profile?.avatarUrl || profile?.avatar_url || profile?.avatar || user?.avatarUrl || user?.avatar_url || user?.avatar || undefined} />
+            <AvatarFallback className={generateAvatarColor(user?.displayName || user?.display_name || 'U')}>
+              {getInitials(user?.displayName || user?.display_name || 'U')}
             </AvatarFallback>
           </Avatar>
           <div>

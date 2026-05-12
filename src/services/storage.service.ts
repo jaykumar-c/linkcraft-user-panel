@@ -2,11 +2,13 @@ import axiosInstance from '../lib/axios';
 import { API_ENDPOINTS } from '../constants/api';
 
 export interface UploadedFile {
+  id: string;
   publicId: string;
   secureUrl: string;
   originalName: string;
   mimeType: string;
   size: number;
+  sizeMb: number;
   extension: string;
   uploadedAt: string;
 }
@@ -47,8 +49,8 @@ export const uploadFiles = async (files: File[]): Promise<BulkUploadResponse> =>
 };
 
 // Delete file
-export const deleteFile = async (publicId: string): Promise<void> => {
-  await axiosInstance.delete(API_ENDPOINTS.STORAGE.DELETE, { data: { publicId } });
+export const deleteFile = async (id: string): Promise<void> => {
+  await axiosInstance.delete(API_ENDPOINTS.STORAGE.DELETE, { params: { id } });
 };
 
 // Generate download URL

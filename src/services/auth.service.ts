@@ -31,8 +31,8 @@ export const logout = async (refreshToken: string): Promise<void> => {
 
 // Refresh token
 export const refreshToken = async (refreshToken: string): Promise<AuthTokens> => {
-  const response = await axiosInstance.post(API_ENDPOINTS.AUTH.REFRESH, { refreshToken });
-  return response.data;
+  const response = await axiosInstance.post<{ data: AuthTokens }>(API_ENDPOINTS.AUTH.REFRESH, { refreshToken });
+  return response.data.data;
 };
 
 // Forgot password
@@ -47,6 +47,14 @@ export const resetPassword = async (data: ResetPasswordRequest): Promise<void> =
 
 // Verify email
 export const verifyEmail = async (data: VerifyEmailRequest): Promise<{ user: User }> => {
-  const response = await axiosInstance.post(API_ENDPOINTS.AUTH.VERIFY_EMAIL, data);
-  return response.data;
+  const response = await axiosInstance.post<{ data: { user: User } }>(API_ENDPOINTS.AUTH.VERIFY_EMAIL, data);
+  return response.data.data;
+};
+
+// Check username availability
+export const checkUsername = async (username: string): Promise<{ available: boolean; message: string }> => {
+  const response = await axiosInstance.get(API_ENDPOINTS.AUTH.CHECK_USERNAME, {
+    params: { username },
+  });
+  return response.data.data;
 };

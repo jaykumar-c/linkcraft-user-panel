@@ -10,7 +10,7 @@ export const changePassword = async (data: ChangePasswordRequest): Promise<void>
 // Get active sessions
 export const getSessions = async (): Promise<any[]> => {
   const response = await axiosInstance.get(API_ENDPOINTS.SETTINGS.SESSIONS);
-  return response.data;
+  return response.data.data;
 };
 
 // Revoke session

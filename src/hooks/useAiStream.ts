@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import { API_BASE_URL, API_ENDPOINTS } from "../constants/api";
 
 export function useAiStream() {
   const [text, setText] = useState("");
@@ -18,7 +19,7 @@ export function useAiStream() {
 
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}ai/generate-bio`,
+          `${API_BASE_URL}${API_ENDPOINTS.AI_BIO.GENERATE}`,
           {
             method: "POST",
             headers: {

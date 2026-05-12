@@ -14,13 +14,13 @@ export function AnalyticsPage() {
     );
   }
 
-  const stats = analytics || {
-    totalViews: 0,
-    totalClicks: 0,
-    clickRate: 0,
+  const stats = {
+    totalViews: analytics?.totalViews ?? (analytics as any)?.total_views ?? 0,
+    totalClicks: analytics?.totalClicks ?? (analytics as any)?.total_clicks ?? 0,
+    clickRate: analytics?.clickRate ?? (analytics as any)?.click_rate ?? 0,
   };
 
-  const topLinks = (analytics as any)?.topLinks || [];
+  const topLinks = (analytics as any)?.topLinks || (analytics as any)?.top_links || [];
 
   return (
     <motion.div

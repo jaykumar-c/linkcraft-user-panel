@@ -157,6 +157,8 @@ function toast({ ...props }: Toast) {
     },
   });
 
+  addToRemoveQueue(id);
+
   return {
     id: id,
     dismiss,

@@ -24,7 +24,10 @@ export function SettingsPage() {
   });
 
   const onPasswordSubmit = async (data: ChangePasswordFormData) => {
-    await changePassword.mutateAsync(data);
+    await changePassword.mutateAsync({
+      currentPassword: data.currentPassword,
+      newPassword: data.newPassword,
+    });
     reset();
   };
 

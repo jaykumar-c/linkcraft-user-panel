@@ -15,13 +15,16 @@ import {
 export const getLinks = async (params?: LinkQuery): Promise<{ links: Link[]; total: number }> => {
   const response = await axiosInstance.get(API_ENDPOINTS.LINKS.LIST, { params });
   const result = response.data;
-  // Handle both raw array and wrapped response
   if (Array.isArray(result)) {
     return { links: result, total: result.length };
   }
-  // Handle wrapped response { message, errorCode, data, total }
   if (result.data) {
-    return { links: result.data, total: result.total || result.data.length };
+    if (Array.isArray(result.data)) {
+      return { links: result.data, total: result.total || result.data.length };
+    }
+    if (result.data.data && Array.isArray(result.data.data)) {
+      return { links: result.data.data, total: result.data.total || result.data.data.length };
+    }
   }
   return { links: [], total: 0 };
 };

@@ -106,13 +106,13 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               className="flex items-center space-x-3 mb-4 hover:bg-accent/50 p-2 rounded-xl -mx-2 transition-colors cursor-pointer"
             >
               <Avatar className="h-10 w-10">
-                <AvatarImage src={profile?.avatar_url || profile?.avatar || user?.avatar_url || user?.avatar || undefined} />
-                <AvatarFallback className={generateAvatarColor(profile?.display_name || user?.display_name || user?.displayName || 'User')}>
-                  {getInitials(profile?.display_name || user?.display_name || user?.displayName || 'User')}
+                <AvatarImage src={profile?.avatarUrl || profile?.avatar_url || profile?.avatar || user?.avatarUrl || user?.avatar_url || user?.avatar || undefined} />
+                <AvatarFallback className={generateAvatarColor(profile?.displayName || profile?.display_name || user?.displayName || user?.display_name || 'User')}>
+                  {getInitials(profile?.displayName || profile?.display_name || user?.displayName || user?.display_name || 'User')}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium truncate">{profile?.display_name || user?.display_name || user?.displayName}</p>
+                <p className="text-sm font-medium truncate">{profile?.displayName || profile?.display_name || user?.displayName || user?.display_name}</p>
                 <p className="text-xs text-muted-foreground truncate">@{profile?.username || user?.username}</p>
               </div>
             </Link>

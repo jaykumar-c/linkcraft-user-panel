@@ -15,8 +15,13 @@ export const updateProfile = async (data: UpdateProfileRequest): Promise<User> =
   return response.data.data;
 };
 
-// Upload avatar - uses Cloudinary storage API
-export const uploadAvatar = async (file: File): Promise<{ avatar: string }> => {
+// Upload avatar
+export const uploadAvatar = async (file: File): Promise<{ avatar: string; uploadId: string }> => {
   const result = await storageService.uploadFile(file);
-  return { avatar: result.secureUrl };
+  return { avatar: result.secureUrl, uploadId: result.id };
+};
+
+// Delete avatar file
+export const deleteAvatar = async (mediaId: string): Promise<void> => {
+  await storageService.deleteFile(mediaId);
 };

@@ -1,19 +1,49 @@
+import { lazy, Suspense } from 'react';
 import { createBrowserRouter, RouterProvider, Navigate } from 'react-router-dom';
 import { ProtectedRoute } from './ProtectedRoute';
 import { GuestRoute } from './GuestRoute';
 import { DashboardLayout } from '../components/layouts/DashboardLayout';
 import { LoginPage } from '../features/auth/LoginPage';
-import { RegisterPage } from '../features/auth/RegisterPage';
-import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
-import { ResetPasswordPage } from '../features/auth/ResetPasswordPage';
-import { VerifyEmailPage } from '../features/auth/VerifyEmailPage';
-import { ProfilePage } from '../features/profile/ProfilePage';
-import { LinksPage } from '../features/links/LinksPage';
-import { AiBioPage } from '../features/ai-bio/AiBioPage';
-import { SettingsPage } from '../features/settings/SettingsPage';
-import { PreviewPage } from '../features/preview/PreviewPage';
-import { AnalyticsPage } from '../features/analytics/AnalyticsPage';
-import { DashboardHome } from '../features/dashboard/DashboardHome';
+import { useSeo } from '../hooks/useSeo';
+import { useEffect } from 'react';
+
+const RegisterPage = lazy(() => import('../features/auth/RegisterPage').then(m => ({ default: m.RegisterPage })));
+const ForgotPasswordPage = lazy(() => import('../features/auth/ForgotPasswordPage').then(m => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('../features/auth/ResetPasswordPage').then(m => ({ default: m.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import('../features/auth/VerifyEmailPage').then(m => ({ default: m.VerifyEmailPage })));
+const ProfilePage = lazy(() => import('../features/profile/ProfilePage').then(m => ({ default: m.ProfilePage })));
+const LinksPage = lazy(() => import('../features/links/LinksPage').then(m => ({ default: m.LinksPage })));
+const AiBioPage = lazy(() => import('../features/ai-bio/AiBioPage').then(m => ({ default: m.AiBioPage })));
+const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then(m => ({ default: m.SettingsPage })));
+const PreviewPage = lazy(() => import('../features/preview/PreviewPage').then(m => ({ default: m.PreviewPage })));
+const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
+const DashboardHome = lazy(() => import('../features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
+
+function LoadingFallback() {
+  return (
+    <div className="flex min-h-[400px] items-center justify-center">
+      <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+    </div>
+  );
+}
+
+function GuestPageSeo({ title, children }: { title: string; children: React.ReactNode }) {
+  const { setPageSeo } = useSeo();
+  useEffect(() => {
+    setPageSeo(title);
+  }, [title, setPageSeo]);
+  return <>{children}</>;
+}
+
+function AuthRouteWrapper({ children, title }: { children: React.ReactNode; title: string }) {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <GuestPageSeo title={title}>
+        <GuestRoute>{children}</GuestRoute>
+      </GuestPageSeo>
+    </Suspense>
+  );
+}
 
 const router = createBrowserRouter([
   {
@@ -23,41 +53,45 @@ const router = createBrowserRouter([
   {
     path: '/login',
     element: (
-      <GuestRoute>
-        <LoginPage />
-      </GuestRoute>
+      <Suspense fallback={<LoadingFallback />}>
+        <GuestPageSeo title="Login">
+          <GuestRoute>
+            <LoginPage />
+          </GuestRoute>
+        </GuestPageSeo>
+      </Suspense>
     ),
   },
   {
     path: '/register',
     element: (
-      <GuestRoute>
+      <AuthRouteWrapper title="Create Account">
         <RegisterPage />
-      </GuestRoute>
+      </AuthRouteWrapper>
     ),
   },
   {
     path: '/forgot-password',
     element: (
-      <GuestRoute>
+      <AuthRouteWrapper title="Forgot Password">
         <ForgotPasswordPage />
-      </GuestRoute>
+      </AuthRouteWrapper>
     ),
   },
   {
     path: '/reset-password',
     element: (
-      <GuestRoute>
+      <AuthRouteWrapper title="Reset Password">
         <ResetPasswordPage />
-      </GuestRoute>
+      </AuthRouteWrapper>
     ),
   },
   {
     path: '/verify-email',
     element: (
-      <GuestRoute>
+      <AuthRouteWrapper title="Verify Email">
         <VerifyEmailPage />
-      </GuestRoute>
+      </AuthRouteWrapper>
     ),
   },
   {
@@ -70,31 +104,59 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <DashboardHome />,
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <DashboardHome />
+          </Suspense>
+        ),
       },
       {
         path: 'links',
-        element: <LinksPage />,
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <LinksPage />
+          </Suspense>
+        ),
       },
       {
         path: 'ai-bio',
-        element: <AiBioPage />,
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <AiBioPage />
+          </Suspense>
+        ),
       },
       {
         path: 'analytics',
-        element: <AnalyticsPage />,
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <AnalyticsPage />
+          </Suspense>
+        ),
       },
       {
         path: 'preview',
-        element: <PreviewPage />,
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <PreviewPage />
+          </Suspense>
+        ),
       },
       {
         path: 'profile',
-        element: <ProfilePage />,
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <ProfilePage />
+          </Suspense>
+        ),
       },
       {
         path: 'settings',
-        element: <SettingsPage />,
+        element: (
+          <Suspense fallback={<LoadingFallback />}>
+            <SettingsPage />
+          </Suspense>
+        ),
       },
     ],
   },

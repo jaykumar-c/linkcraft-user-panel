@@ -3,9 +3,10 @@ import { Link } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
-import { Loader2 } from 'lucide-react';
+import { Loader2, CheckCircle2, XCircle } from 'lucide-react';
 import { registerSchema, type RegisterFormData } from '../../schemas/auth.schema';
 import { useRegister } from '../../hooks/useAuth';
+import { useUsernameCheck } from '../../hooks/useUsernameCheck';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
@@ -20,11 +21,16 @@ export function RegisterPage() {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 
+  const watchedUsername = watch('username');
+  const { isChecking: isCheckingUsername, isAvailable: isUsernameAvailable, message: usernameMessage } = useUsernameCheck(watchedUsername || '');
+
   const onSubmit = async (data: RegisterFormData) => {
+    if (watchedUsername && watchedUsername.length >= 3 && !isUsernameAvailable) return;
     setIsLoading(true);
     try {
       await registerMutation.mutateAsync(data);
@@ -75,12 +81,25 @@ export function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="username">Username</Label>
-              <Input
-                id="username"
-                placeholder="johndoe"
-                {...register('username')}
-                className={errors.username ? 'border-destructive' : ''}
-              />
+              <div className="relative">
+                <Input
+                  id="username"
+                  placeholder="johndoe"
+                  {...register('username')}
+                  className={errors.username ? 'border-destructive' : ''}
+                />
+                <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                  {isCheckingUsername && (
+                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                  )}
+                  {!isCheckingUsername && watchedUsername?.length >= 3 && isUsernameAvailable && (
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  )}
+                  {!isCheckingUsername && watchedUsername?.length >= 3 && !isUsernameAvailable && usernameMessage && (
+                    <XCircle className="h-4 w-4 text-destructive" />
+                  )}
+                </div>
+              </div>
               {errors.username && (
                 <motion.p
                   initial={{ opacity: 0 }}
@@ -88,6 +107,15 @@ export function RegisterPage() {
                   className="text-sm text-destructive"
                 >
                   {errors.username.message}
+                </motion.p>
+              )}
+              {!errors.username && usernameMessage && watchedUsername?.length >= 3 && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className={`text-sm ${isUsernameAvailable ? 'text-green-500' : 'text-destructive'}`}
+                >
+                  {usernameMessage}
                 </motion.p>
               )}
             </div>
