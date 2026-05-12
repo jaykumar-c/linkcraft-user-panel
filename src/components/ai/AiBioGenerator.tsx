@@ -36,8 +36,7 @@ const TONES = [
   { value: "professional", label: "Professional", icon: BriefcaseIcon },
   { value: "casual", label: "Casual", icon: MessageSquareIcon },
   { value: "humorous", label: "Humorous", icon: SmileIcon },
-  { value: "bold", label: "Bold", icon: Zap },
-  { value: "friendly", label: "Friendly", icon: HeartIcon },
+  { value: "minimalist", label: "Minimalist", icon: HeartIcon },
 ];
 
 const LENGTHS = [
