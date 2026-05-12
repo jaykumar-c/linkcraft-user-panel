@@ -27,12 +27,10 @@ export function ResetPasswordPage() {
   });
 
   const onSubmit = async (data: ResetPasswordFormData) => {
-    if (!token) {
-      return;
-    }
+    if (!token) return;
     setIsLoading(true);
     try {
-      await resetPassword.mutateAsync({ ...data, token });
+      await resetPassword.mutateAsync({ token, newPassword: data.password });
       setIsSuccess(true);
     } finally {
       setIsLoading(false);

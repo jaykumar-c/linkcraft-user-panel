@@ -51,6 +51,8 @@ export const resetPasswordSchema = z.object({
   path: ['confirmPassword'],
 });
 
+export type ResetPasswordFormFields = z.infer<typeof resetPasswordSchema>;
+
 export type ResetPasswordFormData = z.infer<typeof resetPasswordSchema>;
 
 // Verify email schema
