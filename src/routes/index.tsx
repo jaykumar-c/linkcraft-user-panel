@@ -16,7 +16,7 @@ const LinksPage = lazy(() => import('../features/links/LinksPage').then(m => ({ 
 const AiBioPage = lazy(() => import('../features/ai-bio/AiBioPage').then(m => ({ default: m.AiBioPage })));
 const SettingsPage = lazy(() => import('../features/settings/SettingsPage').then(m => ({ default: m.SettingsPage })));
 const PreviewPage = lazy(() => import('../features/preview/PreviewPage').then(m => ({ default: m.PreviewPage })));
-const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
+// const AnalyticsPage = lazy(() => import('../features/analytics/AnalyticsPage').then(m => ({ default: m.AnalyticsPage })));
 const DashboardHome = lazy(() => import('../features/dashboard/DashboardHome').then(m => ({ default: m.DashboardHome })));
 
 function LoadingFallback() {
@@ -126,14 +126,14 @@ const router = createBrowserRouter([
           </Suspense>
         ),
       },
-      {
-        path: 'analytics',
-        element: (
-          <Suspense fallback={<LoadingFallback />}>
-            <AnalyticsPage />
-          </Suspense>
-        ),
-      },
+      // {
+      //   path: 'analytics',
+      //   element: (
+      //     <Suspense fallback={<LoadingFallback />}>
+      //       <AnalyticsPage />
+      //     </Suspense>
+      //   ),
+      // },
       {
         path: 'preview',
         element: (

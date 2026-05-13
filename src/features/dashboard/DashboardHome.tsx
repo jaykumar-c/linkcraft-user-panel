@@ -7,7 +7,7 @@ import {
   Loader2
 } from 'lucide-react';
 import { useLinks } from '../../hooks/useLinks';
-import { useAnalyticsOverview } from '../../hooks/useAnalytics';
+// import { useAnalyticsOverview } from '../../hooks/useAnalytics';
 import { useProfile } from '../../hooks/useProfile';
 import { useAuthStore } from '../../store/authStore';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card';
@@ -18,25 +18,28 @@ import { getInitials, generateAvatarColor } from '../../lib/utils';
 export function DashboardHome() {
   const user = useAuthStore((state) => state.user);
   const { data: linksData, isLoading: linksLoading } = useLinks();
-  const { data: analytics, isLoading: analyticsLoading } = useAnalyticsOverview();
+  // const { data: analytics, isLoading: analyticsLoading } = useAnalyticsOverview();
   const { data: profile } = useProfile();
 
-  const stats = {
-    totalViews: analytics?.totalViews ?? (analytics as any)?.total_views ?? 0,
-    totalClicks: analytics?.totalClicks ?? (analytics as any)?.total_clicks ?? 0,
-    clickRate: analytics?.clickRate ?? (analytics as any)?.click_rate ?? 0,
-  };
+  // const stats = {
+  //   totalViews: analytics?.totalViews ?? (analytics as any)?.total_views ?? 0,
+  //   totalClicks: analytics?.totalClicks ?? (analytics as any)?.total_clicks ?? 0,
+  //   clickRate: analytics?.clickRate ?? (analytics as any)?.click_rate ?? 0,
+  // };
   
   const links: any[] = (linksData as any)?.links || (Array.isArray(linksData) ? linksData : []);
 
   const profileCompletion = () => {
     if (!profile) return 0;
     let completed = 0;
-    if (profile.display_name || profile.displayName) completed++;
-    if (profile.username) completed++;
-    if (profile.avatar_url || profile.avatar) completed++;
-    if (profile.bio_text || profile.bio) completed++;
-    return Math.round((completed / 4) * 100);
+    const checks = [
+      profile.display_name || profile.displayName,
+      profile.username,
+      profile.avatar_url || profile.avatarUrl || profile.avatar,
+      profile.bio_text || profile.bioText || profile.bio,
+    ];
+    checks.forEach((c) => { if (c) completed++; });
+    return Math.round((completed / checks.length) * 100);
   };
 
   const activeLinksCount = links.filter((l: any) => l.isActive).length;
@@ -78,7 +81,7 @@ export function DashboardHome() {
       </div>
 
       {/* Stats Row */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--primary) / 0.2)", background: "linear-gradient(135deg, hsl(var(--primary) / 0.05), hsl(var(--primary) / 0.02))" }}>
           <p className="text-xs font-medium text-muted-foreground mb-1">Total Links</p>
           {linksLoading ? (
@@ -91,23 +94,7 @@ export function DashboardHome() {
           )}
         </div>
 
-        <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--accent) / 0.3)" }}>
-          <p className="text-xs font-medium text-muted-foreground mb-1">Profile Views</p>
-          {analyticsLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <span className="text-2xl font-bold">{stats.totalViews.toLocaleString()}</span>
-          )}
-        </div>
-
-        <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--accent) / 0.3)" }}>
-          <p className="text-xs font-medium text-muted-foreground mb-1">Total Clicks</p>
-          {analyticsLoading ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <span className="text-2xl font-bold">{stats.totalClicks.toLocaleString()}</span>
-          )}
-        </div>
+        {/* Profile Views & Total Clicks hidden (analytics module disabled) */}
 
         <div className="rounded-2xl border-2 p-4 transition-all hover:shadow-md" style={{ borderColor: "hsl(var(--accent) / 0.3)" }}>
           <p className="text-xs font-medium text-muted-foreground mb-1">AI Tokens</p>

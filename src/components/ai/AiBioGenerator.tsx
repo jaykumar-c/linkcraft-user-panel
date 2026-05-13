@@ -60,12 +60,15 @@ function HeartIcon() { return <span className="text-xs">❤️</span>; }
 
 function LoadingDots() {
   return (
-    <span className="inline-flex items-center gap-0.5">
+    <span className="inline-flex items-center gap-1">
       {[0, 1, 2].map((i) => (
         <span
           key={i}
-          className="inline-block w-1.5 h-1.5 rounded-full bg-current animate-pulse"
-          style={{ animationDelay: `${i * 200}ms` }}
+          className="inline-block w-1.5 h-1.5 rounded-full"
+          style={{
+            backgroundColor: "hsl(var(--primary))",
+            animation: `bounce 1.4s ease-in-out ${i * 0.16}s infinite`,
+          }}
         />
       ))}
     </span>
@@ -75,6 +78,38 @@ function LoadingDots() {
 function TypingCursor() {
   return (
     <span className="inline-block w-0.5 h-4 bg-primary ml-0.5 animate-pulse" />
+  );
+}
+
+function ThinkingOrb() {
+  return (
+    <div className="relative flex items-center justify-center w-12 h-12 shrink-0">
+      <div
+        className="absolute inset-0 rounded-full animate-spin"
+        style={{
+          border: "2px solid transparent",
+          borderTopColor: "hsl(var(--primary))",
+          borderBottomColor: "hsl(var(--primary))",
+          animation: "spin 1s linear infinite",
+        }}
+      />
+      <div
+        className="absolute inset-1 rounded-full animate-spin"
+        style={{
+          border: "2px solid transparent",
+          borderLeftColor: "hsl(var(--primary) / 0.4)",
+          borderRightColor: "hsl(var(--primary) / 0.4)",
+          animation: "spin 1.5s linear infinite reverse",
+        }}
+      />
+      <div
+        className="w-5 h-5 rounded-full"
+        style={{
+          background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))",
+          boxShadow: "0 0 20px hsl(var(--primary) / 0.3)",
+        }}
+      />
+    </div>
   );
 }
 
@@ -402,19 +437,43 @@ export function AiBioGenerator() {
                 )}
 
                 {isLoading && !generatedBio && (
-                  <div className="flex items-center gap-3 py-4">
-                    <div className="flex items-center justify-center w-10 h-10 rounded-xl shrink-0" style={{ background: "linear-gradient(135deg, hsl(var(--primary)), hsl(var(--primary) / 0.6))" }}>
-                      <Brain className="w-5 h-5 text-white" />
-                    </div>
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="flex flex-col items-center justify-center h-full min-h-[160px] text-center gap-4"
+                  >
+                    <ThinkingOrb />
                     <div>
-                      <p className="text-sm font-medium" style={{ color: "hsl(var(--primary))" }}>
+                      <motion.p
+                        className="text-sm font-semibold"
+                        style={{ color: "hsl(var(--primary))" }}
+                        animate={{ opacity: [1, 0.6, 1] }}
+                        transition={{ duration: 2, repeat: Infinity }}
+                      >
                         AI is thinking
-                      </p>
-                      <p className="text-xs text-muted-foreground">
+                      </motion.p>
+                      <p className="text-xs text-muted-foreground mt-1">
                         Crafting your perfect bio<LoadingDots />
                       </p>
                     </div>
-                  </div>
+                    <div className="flex gap-1.5">
+                      {["Analyzing", "Generating", "Refining"].map((step, i) => (
+                        <motion.span
+                          key={step}
+                          className="text-[10px] px-2 py-0.5 rounded-full font-medium"
+                          style={{
+                            backgroundColor: "hsl(var(--primary) / 0.08)",
+                            color: "hsl(var(--primary))",
+                          }}
+                          initial={{ opacity: 0.3 }}
+                          animate={{ opacity: [0.3, 1, 0.3] }}
+                          transition={{ duration: 2, delay: i * 0.6, repeat: Infinity }}
+                        >
+                          {step}
+                        </motion.span>
+                      ))}
+                    </div>
+                  </motion.div>
                 )}
 
                 {generatedBio && (

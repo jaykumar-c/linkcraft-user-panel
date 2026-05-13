@@ -1,7 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, GripVertical, Edit2, Trash2, Copy, Loader2, Search, Upload, X, ChevronRight, ExternalLink } from 'lucide-react';
+import { Plus, GripVertical, Edit2, Trash2, Copy, Loader2, Search, Upload, X, ChevronRight, ExternalLink, AlertTriangle } from 'lucide-react';
 import moment from 'moment';
 import { useLinks, useCreateLink, useUpdateLink, useDeleteLink, useToggleLinkActive, useRestoreLink, useBulkOperation, useReorderLinks } from '../../hooks/useLinks';
 import { useUploadFile } from '../../hooks/useStorage';
@@ -222,17 +222,39 @@ function LinkDialog({ link, onClose, nextOrder }: { link?: any; onClose: () => v
     reset,
   } = useForm<CreateLinkFormData | UpdateLinkFormData>({
     resolver: zodResolver(schema),
-    defaultValues: link ? {
-      ...link,
-      linkId: link.id,
-    } : {
+    defaultValues: {
       title: '',
       url: '',
       description: '',
-      linkType: 'custom',
+      linkType: 'other',
       isActive: true,
     },
   });
+
+  // Reset form when link changes (edit mode)
+  useEffect(() => {
+    if (link) {
+      reset({
+        linkId: link.id,
+        title: link.title || '',
+        url: link.url || '',
+        description: link.description || '',
+        linkType: link.linkType || 'other',
+        iconUrl: link.iconUrl || '',
+        thumbnailUrl: link.thumbnailUrl || '',
+        displayOrder: link.displayOrder ?? link.orderIndex ?? 0,
+        isActive: link.isActive !== false,
+      });
+    } else {
+      reset({
+        title: '',
+        url: '',
+        description: '',
+        linkType: 'other',
+        isActive: true,
+      });
+    }
+  }, [link, reset]);
 
   // Set displayOrder when dialog opens or nextOrder changes
   useEffect(() => {
@@ -286,48 +308,52 @@ function LinkDialog({ link, onClose, nextOrder }: { link?: any; onClose: () => v
   };
 
   return (
-    <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto">
+    <DialogContent className="sm:max-w-2xl">
       <DialogHeader>
         <DialogTitle>{isEdit ? 'Edit Link' : 'Create New Link'}</DialogTitle>
         <DialogDescription>
           {isEdit ? 'Update your link details below.' : 'Add a new link to your profile.'}
         </DialogDescription>
       </DialogHeader>
+      <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 flex items-center gap-2 mb-3">
+        <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+        <p className="text-xs text-amber-700">
+          Only public links allowed. Private links won't be AI-scannable for your bio.
+        </p>
+      </div>
       <form onSubmit={handleSubmit(onSubmit)}>
-        <div className="space-y-4 py-4">
-          {/* Title */}
-          <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="My Website"
-              {...register('title')}
-              className={errors.title ? 'border-destructive' : ''}
-            />
-            {errors.title && <p className="text-sm text-destructive">{errors.title.message}</p>}
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label htmlFor="title" className="text-sm">Title *</Label>
+              <Input
+                id="title"
+                placeholder="My Website"
+                {...register('title')}
+                className={`h-9 ${errors.title ? 'border-destructive' : ''}`}
+              />
+              {errors.title && <p className="text-xs text-destructive">{errors.title.message}</p>}
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="url" className="text-sm">URL *</Label>
+              <Input
+                id="url"
+                type="url"
+                placeholder="https://example.com"
+                {...register('url')}
+                className={`h-9 ${errors.url ? 'border-destructive' : ''}`}
+              />
+              {errors.url && <p className="text-xs text-destructive">{errors.url.message}</p>}
+            </div>
           </div>
 
-          {/* URL */}
-          <div className="space-y-2">
-            <Label htmlFor="url">URL *</Label>
-            <Input
-              id="url"
-              type="url"
-              placeholder="https://example.com"
-              {...register('url')}
-              className={errors.url ? 'border-destructive' : ''}
-            />
-            {errors.url && <p className="text-sm text-destructive">{errors.url.message}</p>}
-          </div>
-
-          {/* Link Type */}
-          <div className="space-y-2">
-            <Label htmlFor="linkType">Link Type</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="linkType" className="text-sm">Link Type</Label>
             <Select
-              value={selectedLinkType || 'custom'}
+              value={selectedLinkType || 'other'}
               onValueChange={(value: string) => setValue('linkType', value as any)}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-9">
                 <SelectValue placeholder="Select link type" />
               </SelectTrigger>
               <SelectContent>
@@ -340,132 +366,129 @@ function LinkDialog({ link, onClose, nextOrder }: { link?: any; onClose: () => v
             </Select>
           </div>
 
-          {/* Category */}
-          <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Input
-              id="category"
-              placeholder="e.g., Social, Work, Portfolio"
-              {...register('category')}
-              className={errors.category ? 'border-destructive' : ''}
-            />
-          </div>
-
-          {/* Description */}
-          <div className="space-y-2">
-            <Label htmlFor="description">Description (optional)</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="description" className="text-sm">Description (optional)</Label>
             <Textarea
               id="description"
               placeholder="A brief description of your link"
               {...register('description')}
-              className={errors.description ? 'border-destructive' : ''}
+              className={`min-h-[80px] resize-none ${errors.description ? 'border-destructive' : ''}`}
             />
-            {errors.description && <p className="text-sm text-destructive">{errors.description.message}</p>}
+            {errors.description && <p className="text-xs text-destructive">{errors.description.message}</p>}
           </div>
 
-          {/* Icon Upload */}
-          <div className="space-y-2">
-            <Label>Icon Image (optional)</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                ref={iconInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleIconUpload}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => iconInputRef.current?.click()}
-                disabled={uploadingIcon}
-              >
-                {uploadingIcon ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {uploadingIcon ? 'Uploading...' : 'Upload Icon'}
-              </Button>
-              {watch('iconUrl') && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setValue('iconUrl', '')}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-sm">Icon (optional)</Label>
+              <div className="border border-dashed rounded-lg p-2 text-center hover:bg-muted/30 transition-colors">
+                <input
+                  type="file"
+                  ref={iconInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleIconUpload}
+                />
+                {watch('iconUrl') ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <img src={watch('iconUrl')} alt="Icon" className="h-8 w-8 object-contain rounded border bg-background p-0.5" />
+                      <span className="text-xs text-muted-foreground truncate max-w-[100px]">Icon uploaded</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => iconInputRef.current?.click()} disabled={uploadingIcon}>
+                        {uploadingIcon ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Edit'}
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-destructive" onClick={() => setValue('iconUrl', '')}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => iconInputRef.current?.click()}
+                    disabled={uploadingIcon}
+                    className="w-full h-9 gap-1.5 text-xs text-muted-foreground"
+                  >
+                    {uploadingIcon ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                    {uploadingIcon ? 'Uploading...' : 'Upload icon'}
+                  </Button>
+                )}
+              </div>
             </div>
-            {watch('iconUrl') && (
-              <img src={watch('iconUrl')} alt="Icon" className="h-8 w-8 object-contain" />
-            )}
-          </div>
-
-          {/* Thumbnail Upload */}
-          <div className="space-y-2">
-            <Label>Thumbnail Image (optional)</Label>
-            <div className="flex items-center gap-2">
-              <input
-                type="file"
-                ref={thumbnailInputRef}
-                accept="image/*"
-                className="hidden"
-                onChange={handleThumbnailUpload}
-              />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => thumbnailInputRef.current?.click()}
-                disabled={uploadingThumbnail}
-              >
-                {uploadingThumbnail ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-                {uploadingThumbnail ? 'Uploading...' : 'Upload Thumbnail'}
-              </Button>
-              {watch('thumbnailUrl') && (
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setValue('thumbnailUrl', '')}
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+            <div className="space-y-1.5">
+              <Label className="text-sm">Thumbnail (optional)</Label>
+              <div className="border border-dashed rounded-lg p-2 text-center hover:bg-muted/30 transition-colors">
+                <input
+                  type="file"
+                  ref={thumbnailInputRef}
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleThumbnailUpload}
+                />
+                {watch('thumbnailUrl') ? (
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <img src={watch('thumbnailUrl')} alt="Thumbnail" className="h-8 w-12 object-cover rounded border bg-background" />
+                      <span className="text-xs text-muted-foreground truncate max-w-[80px]">Thumbnail</span>
+                    </div>
+                    <div className="flex gap-1">
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2" onClick={() => thumbnailInputRef.current?.click()} disabled={uploadingThumbnail}>
+                        {uploadingThumbnail ? <Loader2 className="h-3 w-3 animate-spin" /> : 'Edit'}
+                      </Button>
+                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 text-destructive" onClick={() => setValue('thumbnailUrl', '')}>
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => thumbnailInputRef.current?.click()}
+                    disabled={uploadingThumbnail}
+                    className="w-full h-9 gap-1.5 text-xs text-muted-foreground"
+                  >
+                    {uploadingThumbnail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                    {uploadingThumbnail ? 'Uploading...' : 'Upload thumbnail'}
+                  </Button>
+                )}
+              </div>
             </div>
-            {watch('thumbnailUrl') && (
-              <img src={watch('thumbnailUrl')} alt="Thumbnail" className="h-16 w-16 object-contain rounded" />
-            )}
           </div>
 
-          {/* Display Order */}
-          <div className="space-y-2">
-            <Label htmlFor="displayOrder">Display Order</Label>
-            <Input
-              id="displayOrder"
-              type="number"
-              min="0"
-              {...register('displayOrder', { valueAsNumber: true })}
-            />
-          </div>
-
-          {/* Active Status */}
-          <div className="flex items-center space-x-2">
-            <Switch
-              id="isActive"
-              checked={watch('isActive') !== false}
-              onCheckedChange={(checked) => setValue('isActive', checked)}
-            />
-            <Label htmlFor="isActive">Active</Label>
+          <div className="flex items-center justify-between pt-1">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="isActive"
+                checked={watch('isActive') !== false}
+                onCheckedChange={(checked) => setValue('isActive', checked)}
+              />
+              <Label htmlFor="isActive" className="text-sm">Active</Label>
+            </div>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="displayOrder" className="text-sm text-muted-foreground">Order</Label>
+              <Input
+                id="displayOrder"
+                type="number"
+                min="0"
+                {...register('displayOrder', { valueAsNumber: true })}
+                className="w-16 h-8 text-center"
+              />
+            </div>
           </div>
         </div>
-        <DialogFooter>
-          <Button type="button" variant="outline" onClick={onClose}>
+        <DialogFooter className="mt-4">
+          <Button type="button" variant="outline" size="sm" onClick={onClose}>
             Cancel
           </Button>
-          <Button type="submit" disabled={createLink.isPending || updateLink.isPending}>
+          <Button type="submit" size="sm" disabled={createLink.isPending || updateLink.isPending}>
             {createLink.isPending || updateLink.isPending ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
                 Saving...
               </>
             ) : (
@@ -608,8 +631,8 @@ export function LinksPage() {
         <p className="text-muted-foreground">Manage your profile links</p>
       </div>
 
-      {/* Filters and Search */}
-      <div className="flex flex-wrap items-center gap-4 mb-6">
+      {/* Filters */}
+      <div className="flex flex-wrap items-center gap-4 mb-3">
         <div className="relative flex-1 min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -656,47 +679,52 @@ export function LinksPage() {
             <SelectItem value="DESC">Descending</SelectItem>
           </SelectContent>
         </Select>
+      </div>
 
-        {selectedLinks.length > 0 && (
-          <>
-            <span className="text-sm text-muted-foreground">
-              {selectedLinks.length} selected
-            </span>
-            <AlertDialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
-              <Button variant="outline" onClick={() => setBulkDialogOpen(true)}>
-                Bulk Actions
-              </Button>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Bulk Operation</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Select an action to perform on {selectedLinks.length} links.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <div className="py-4">
-                  <Select value={bulkAction} onValueChange={setBulkAction}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select action" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="delete">Delete</SelectItem>
-                      <SelectItem value="archive">Archive</SelectItem>
-                      <SelectItem value="activate">Activate</SelectItem>
-                      <SelectItem value="deactivate">Deactivate</SelectItem>
-                      <SelectItem value="restore">Restore</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleBulkAction}>
-                    Apply
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
-          </>
-        )}
+      {/* Actions bar */}
+      <div className="flex items-center justify-between gap-4 mb-6">
+        <div className="flex items-center gap-4">
+          {selectedLinks.length > 0 && (
+            <>
+              <span className="text-sm text-muted-foreground">
+                {selectedLinks.length} selected
+              </span>
+              <AlertDialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
+                <Button variant="outline" onClick={() => setBulkDialogOpen(true)}>
+                  Bulk Actions
+                </Button>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Bulk Operation</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Select an action to perform on {selectedLinks.length} links.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="py-4">
+                    <Select value={bulkAction} onValueChange={setBulkAction}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select action" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="delete">Delete</SelectItem>
+                        <SelectItem value="archive">Archive</SelectItem>
+                        <SelectItem value="activate">Activate</SelectItem>
+                        <SelectItem value="deactivate">Deactivate</SelectItem>
+                        <SelectItem value="restore">Restore</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleBulkAction}>
+                      Apply
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </>
+          )}
+        </div>
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>

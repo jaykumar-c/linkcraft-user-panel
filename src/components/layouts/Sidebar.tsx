@@ -4,7 +4,7 @@ import {
   LayoutDashboard,
   Link as LinkIcon,
   Sparkles,
-  BarChart3,
+  // BarChart3,
   Settings,
   LogOut,
   X,
@@ -25,7 +25,7 @@ const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Links', href: '/dashboard/links', icon: LinkIcon },
   { name: 'AI Bio', href: '/dashboard/ai-bio', icon: Sparkles },
-  { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
+  // { name: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
   { name: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 

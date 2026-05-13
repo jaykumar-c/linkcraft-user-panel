@@ -12,7 +12,7 @@ import {
 // Get links hook with pagination and filters
 export const useLinks = (params?: LinkQuery) => {
   return useQuery({
-    queryKey: ['links', params],
+    queryKey: params ? ['links', params] : ['links'],
     queryFn: () => linksApi.getLinks(params),
   });
 };
@@ -147,15 +147,34 @@ export const useToggleLinkActive = () => {
   return useMutation({
     mutationFn: ({ linkId, isActive }: { linkId: string; isActive: boolean }) =>
       linksApi.toggleLinkStatus(linkId, isActive),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['links'] });
+    onMutate: async ({ linkId, isActive }) => {
+      await queryClient.cancelQueries({ queryKey: ['links'] });
+      const previousQueries = queryClient.getQueriesData({ queryKey: ['links'] });
+      queryClient.setQueriesData({ queryKey: ['links'] }, (old: any) => {
+        if (!old?.links) return old;
+        return {
+          ...old,
+          links: old.links.map((link: any) =>
+            link.id === linkId ? { ...link, isActive } : link
+          ),
+        };
+      });
+      return { previousQueries };
     },
-    onError: (error: Error) => {
+    onError: (error: Error, _variables, context) => {
+      if (context?.previousQueries) {
+        for (const [key, data] of context.previousQueries) {
+          queryClient.setQueryData(key, data);
+        }
+      }
       toast({
         title: 'Update failed',
         description: error.message || 'Unable to update link status.',
         variant: 'destructive',
       });
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['links'] });
     },
   });
 };
