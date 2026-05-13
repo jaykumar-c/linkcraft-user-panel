@@ -24,7 +24,10 @@ import { LinkQuery } from '../../types';
 
 const formatDate = (date: string | number | null | undefined) => {
   if (!date) return 'N/A';
-  return moment(date).format('DD-MM-YYYY');
+  const num = typeof date === 'string' ? Number(date) : date;
+  const ts = num < 1000000000000 ? num * 1000 : num;
+  const m = moment(ts);
+  return m.isValid() ? m.format('DD-MM-YYYY') : 'N/A';
 };
 
 // Link item component
@@ -90,14 +93,13 @@ function LinkItem({ link, onEdit, onDelete, onToggleActive, onRestore, onCopy, d
                 {link.scheduleStartAt && (
                   <span>Scheduled</span>
                 )}
-                <Button
-                  variant="ghost"
-                  size="sm"
+                <button
+                  type="button"
                   onClick={onToggleExpand}
-                  className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground"
+                  className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors cursor-pointer"
                 >
-                  {isExpanded ? 'Less' : 'More'} <ChevronRight className={`h-3 w-3 inline ml-1 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
-                </Button>
+                  {isExpanded ? 'Less' : 'More'} <ChevronRight className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-90' : ''}`} />
+                </button>
               </div>
 
               {/* Expanded detail view */}
