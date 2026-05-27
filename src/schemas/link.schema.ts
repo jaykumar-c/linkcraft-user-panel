@@ -1,12 +1,16 @@
 import { z } from 'zod';
 
-// Link type options
+// Link type options - must match backend LinkType enum
 export const LINK_TYPES = [
   'social',
-  'website',
+  'custom',
+  'music',
+  'video',
+  'store',
   'portfolio',
-  'other',
 ] as const;
+
+export type LinkType = (typeof LINK_TYPES)[number];
 
 // Create link schema
 export const createLinkSchema = z.object({
@@ -21,7 +25,7 @@ export const createLinkSchema = z.object({
     .optional(),
   iconUrl: z.string().optional().or(z.literal('')),
   thumbnailUrl: z.string().optional().or(z.literal('')),
-  linkType: z.enum(LINK_TYPES).default('other'),
+  linkType: z.enum(LINK_TYPES).default('custom'),
   category: z
     .string()
     .max(50, 'Category must be at most 50 characters')

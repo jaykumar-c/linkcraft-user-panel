@@ -228,7 +228,7 @@ function LinkDialog({ link, onClose, nextOrder }: { link?: any; onClose: () => v
       title: '',
       url: '',
       description: '',
-      linkType: 'other',
+      linkType: 'custom',
       isActive: true,
     },
   });
@@ -241,7 +241,7 @@ function LinkDialog({ link, onClose, nextOrder }: { link?: any; onClose: () => v
         title: link.title || '',
         url: link.url || '',
         description: link.description || '',
-        linkType: link.linkType || 'other',
+        linkType: link.linkType || 'custom',
         iconUrl: link.iconUrl || '',
         thumbnailUrl: link.thumbnailUrl || '',
         displayOrder: link.displayOrder ?? link.orderIndex ?? 0,
@@ -252,7 +252,7 @@ function LinkDialog({ link, onClose, nextOrder }: { link?: any; onClose: () => v
         title: '',
         url: '',
         description: '',
-        linkType: 'other',
+        linkType: 'custom',
         isActive: true,
       });
     }
@@ -352,7 +352,7 @@ function LinkDialog({ link, onClose, nextOrder }: { link?: any; onClose: () => v
           <div className="space-y-1.5">
             <Label htmlFor="linkType" className="text-sm">Link Type</Label>
             <Select
-              value={selectedLinkType || 'other'}
+              value={selectedLinkType || 'custom'}
               onValueChange={(value: string) => setValue('linkType', value as any)}
             >
               <SelectTrigger className="h-9">
