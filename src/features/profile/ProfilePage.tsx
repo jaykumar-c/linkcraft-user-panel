@@ -3,7 +3,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { motion } from 'framer-motion';
 import moment from 'moment';
-import { Camera, Loader2, Save, CalendarClock, User, Link as LinkIcon, Mail, CreditCard, Eye, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
+import { Camera, Loader2, Save, CalendarClock, User, Link as LinkIcon, Mail, Sparkles, CheckCircle2, XCircle } from 'lucide-react';
 import { updateProfileSchema, type UpdateProfileFormData } from '../../schemas/profile.schema';
 import { useProfile, useUpdateProfile, useUploadAvatar } from '../../hooks/useProfile';
 import { useUsernameCheck } from '../../hooks/useUsernameCheck';
@@ -12,6 +12,7 @@ import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '../../components/ui/avatar';
+import { ImageCropperDialog } from '../../components/ImageCropper';
 import { getInitials, generateAvatarColor } from '../../lib/utils';
 
 export function ProfilePage() {
@@ -21,6 +22,7 @@ export function ProfilePage() {
   const user = useAuthStore((state) => state.user);
   const [isUploading, setIsUploading] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
 
   const formatLastLogin = (timestamp: string | number | undefined) => {
     if (!timestamp) return 'Never';
@@ -95,11 +97,22 @@ export function ProfilePage() {
       alert('File must be an image');
       return;
     }
+    const reader = new FileReader();
+    reader.onload = () => {
+      setCropImageSrc(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+  };
+
+  const handleCropComplete = async (blob: Blob) => {
+    const file = new File([blob], 'avatar.jpg', { type: 'image/jpeg' });
     setIsUploading(true);
     try {
       await uploadAvatar.mutateAsync(file);
     } finally {
       setIsUploading(false);
+      setCropImageSrc(null);
     }
   };
 
@@ -318,24 +331,6 @@ export function ProfilePage() {
             <span className="font-medium">{profile?.email || user?.email || '-'}</span>
           </div>
           
-          <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: 'hsl(var(--border))' }}>
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <CreditCard className="h-5 w-5" />
-              <span>Plan</span>
-            </div>
-            <span className="font-medium capitalize px-3 py-1 rounded-full bg-primary/10" style={{ color: 'hsl(var(--primary))' }}>
-              {user?.plan || 'Free'}
-            </span>
-          </div>
-          
-          <div className="flex items-center justify-between py-3 border-b" style={{ borderColor: 'hsl(var(--border))' }}>
-            <div className="flex items-center gap-3 text-muted-foreground">
-              <Eye className="h-5 w-5" />
-              <span>Profile Views</span>
-            </div>
-            <span className="font-medium">{profile?.totalProfileViews || profile?.total_profile_views || user?.totalProfileViews || user?.total_profile_views || 0}</span>
-          </div>
-          
           <div className="flex items-center justify-between py-3">
             <div className="flex items-center gap-3 text-muted-foreground">
               <CalendarClock className="h-5 w-5" />
@@ -347,6 +342,15 @@ export function ProfilePage() {
           </div>
         </div>
       </div>
+
+      {cropImageSrc && (
+        <ImageCropperDialog
+          open={!!cropImageSrc}
+          onOpenChange={(open) => { if (!open) setCropImageSrc(null); }}
+          imageSrc={cropImageSrc}
+          onCropComplete={handleCropComplete}
+        />
+      )}
     </motion.div>
   );
 }

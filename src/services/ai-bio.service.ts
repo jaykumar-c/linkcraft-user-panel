@@ -49,8 +49,19 @@ export const generateBioStream = async (
   }
 };
 
-export const getAiHistory = async (): Promise<any> => {
-  const response = await axiosInstance.get(API_ENDPOINTS.AI_BIO.HISTORY);
+export const getAiHistory = async (
+  page: number = 1,
+  limit: number = 8,
+): Promise<{
+  generations: any[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}> => {
+  const response = await axiosInstance.get(API_ENDPOINTS.AI_BIO.HISTORY, {
+    params: { page, limit },
+  });
   return response.data.data;
 };
 

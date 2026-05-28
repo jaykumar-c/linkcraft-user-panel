@@ -9,6 +9,8 @@ import {
   Wand2,
   ChevronDown,
   ChevronUp,
+  ChevronLeft,
+  ChevronRight,
   Brain,
   Zap,
   Palette,
@@ -30,7 +32,7 @@ import {
 import { Switch } from "../../components/ui/switch";
 import { copyToClipboard } from "../../lib/utils";
 import { useQuery } from "@tanstack/react-query";
-import { generateBioStream, getAiHistory } from "../../services/ai-bio.service";
+import { generateBioStream, getAiHistory, applyBioToProfile } from "../../services/ai-bio.service";
 
 const TONES = [
   { value: "professional", label: "Professional", icon: BriefcaseIcon },
@@ -120,6 +122,7 @@ export function AiBioGenerator() {
   const [includeLinks, setIncludeLinks] = useState(true);
   const [copied, setCopied] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [applyingId, setApplyingId] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
   const [activeTab, setActiveTab] = useState<"generate" | "history">("generate");
 
@@ -127,6 +130,7 @@ export function AiBioGenerator() {
   const [isLoading, setIsLoading] = useState(false);
   const [generatedBio, setGeneratedBio] = useState("");
   const [lastPrompt, setLastPrompt] = useState("");
+  const [historyPage, setHistoryPage] = useState(1);
 
   const outputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -172,8 +176,8 @@ export function AiBioGenerator() {
   );
 
   const { data: historyData, refetch: refetchHistory } = useQuery({
-    queryKey: ["ai-history"],
-    queryFn: getAiHistory,
+    queryKey: ["ai-history", historyPage],
+    queryFn: () => getAiHistory(historyPage, 8),
   });
 
   const cleanBioText = (text: string): string => {
@@ -219,26 +223,20 @@ export function AiBioGenerator() {
   }, [generatedBio, updateProfile, refetchHistory]);
 
   const handleApplyFromHistory = useCallback(
-    async (response: string) => {
-      const cleanedBio = cleanBioText(response);
-      setIsSaving(true);
+    async (generationId: string) => {
+      setApplyingId(generationId);
       try {
-        await updateProfile.mutateAsync({ bioText: cleanedBio });
+        await applyBioToProfile(generationId);
         refetchHistory();
       } finally {
-        setIsSaving(false);
+        setApplyingId(null);
       }
     },
-    [updateProfile, refetchHistory],
+    [refetchHistory],
   );
 
-  const generations = (Array.isArray(historyData)
-    ? historyData
-    : historyData?.data || historyData?.generations || []
-  ).filter((g: any) => !g.wasApplied);
-  const totalTokens = generations.reduce(
-    (sum: number, g: any) => sum + (g.tokensTotal || 0), 0,
-  );
+  const allGenerations: any[] = historyData?.generations || [];
+  const totalPages = historyData?.totalPages || 1;
 
   return (
     <div className="max-w-4xl mx-auto space-y-8">
@@ -301,8 +299,8 @@ export function AiBioGenerator() {
           >
             <History className="w-4 h-4" />
             History
-            {generations.length > 0 && (
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{generations.length}</span>
+            {allGenerations.length > 0 && (
+              <span className="text-xs px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">{allGenerations.length}</span>
             )}
           </button>
         </div>
@@ -558,55 +556,94 @@ export function AiBioGenerator() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="space-y-4"
+            className="space-y-6"
           >
-            {/* Stats Bar */}
-            {generations.length > 0 && (
-              <div className="flex gap-4 flex-wrap">
-                <div className="flex-1 min-w-[120px] rounded-xl border-2 p-4" style={{ borderColor: "hsl(var(--border))" }}>
-                  <p className="text-2xl font-bold" style={{ color: "hsl(var(--primary))" }}>{generations.length}</p>
-                  <p className="text-xs text-muted-foreground">Generations</p>
-                </div>
-                <div className="flex-1 min-w-[120px] rounded-xl border-2 p-4" style={{ borderColor: "hsl(var(--border))" }}>
-                  <p className="text-2xl font-bold" style={{ color: "hsl(var(--primary))" }}>{totalTokens.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">Tokens Used</p>
-                </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold">Generation History</h2>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {allGenerations.length} bio{allGenerations.length !== 1 ? "s" : ""} generated
+                </p>
               </div>
-            )}
+              {totalPages > 1 && (
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setHistoryPage((p) => Math.max(1, p - 1))}
+                    disabled={historyPage <= 1}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl border border-border hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
+                  <div className="flex items-center gap-1 text-sm font-medium">
+                    <span className="px-2 py-1 rounded-lg bg-primary/10 text-primary min-w-[2rem] text-center">
+                      {historyPage}
+                    </span>
+                    <span className="text-muted-foreground">/</span>
+                    <span className="text-muted-foreground">{totalPages}</span>
+                  </div>
+                  <button
+                    onClick={() => setHistoryPage((p) => Math.min(totalPages, p + 1))}
+                    disabled={historyPage >= totalPages}
+                    className="w-9 h-9 flex items-center justify-center rounded-xl border border-border hover:bg-accent transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
 
-            {generations.length > 0 ? (
-              <div className="space-y-3">
-                {generations.map((gen: any, i: number) => (
+            {allGenerations.length > 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {allGenerations.map((gen: any, i: number) => (
                   <motion.div
                     key={gen.id}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 12 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: i * 0.05 }}
-                    className="rounded-xl border-2 overflow-hidden transition-all hover:shadow-md"
-                    style={{ borderColor: "hsl(var(--border))" }}
+                    transition={{ delay: i * 0.04 }}
+                    className="group rounded-xl border-2 overflow-hidden transition-all hover:shadow-md h-full flex flex-col"
+                    style={{
+                      borderColor: gen.wasApplied
+                        ? "hsl(var(--primary) / 0.12)"
+                        : "hsl(var(--border))",
+                    }}
                   >
-                    <div className="px-4 py-2.5 border-b flex items-center justify-between" style={{ borderColor: "hsl(var(--border))" }}>
+                    <div className="px-4 py-3 flex items-center justify-between gap-2 shrink-0 border-b border-border/40">
                       <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                        <div className="flex items-center justify-center w-6 h-6 rounded-lg bg-primary/10">
+                          <Sparkles className="w-3 h-3" style={{ color: "hsl(var(--primary))" }} />
+                        </div>
                         <span>{new Date(parseInt(gen.createdAt) * 1000).toLocaleDateString()}</span>
-                        <span>·</span>
-                        <span>{gen.model || "AI"}</span>
-                        <span>·</span>
-                        <span>{gen.tokensTotal || 0} tokens</span>
+                        <span className="text-muted-foreground/30">·</span>
+                        <span className="font-medium text-foreground/70">{gen.model || "AI"}</span>
                       </div>
+                      {gen.wasApplied ? (
+                        <span className="flex items-center gap-1 text-xs font-medium text-emerald-600 bg-emerald-50 dark:bg-emerald-900/20 px-2.5 py-1 rounded-full">
+                          <Check className="w-3 h-3" />
+                          Applied
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground/60">{gen.tokensTotal || 0} tokens</span>
+                      )}
                     </div>
-                    <div className="p-4">
-                      <p className="whitespace-pre-wrap text-sm leading-relaxed line-clamp-3">{gen.response}</p>
+
+                    <div className="p-4 flex-1">
+                      <p className="text-sm leading-relaxed text-foreground/85 whitespace-pre-wrap">{gen.response}</p>
                     </div>
-                    {gen.response && (
-                      <div className="px-4 py-3 border-t" style={{ borderColor: "hsl(var(--border))" }}>
+
+                    {gen.response && !gen.wasApplied && (
+                      <div className="px-4 py-3 border-t border-border/40 shrink-0 bg-accent/10">
                         <Button
-                          variant="outline"
+                          variant="default"
                           size="sm"
-                          onClick={() => handleApplyFromHistory(gen.response)}
-                          disabled={isSaving}
-                          className="w-full gap-1.5"
+                          onClick={() => handleApplyFromHistory(gen.id)}
+                          disabled={applyingId === gen.id}
+                          className="w-full gap-1.5 h-9 rounded-lg text-xs font-medium shadow-sm"
                         >
-                          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          {applyingId === gen.id ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <Check className="w-3.5 h-3.5" />
+                          )}
                           Apply to Profile
                         </Button>
                       </div>
@@ -615,13 +652,13 @@ export function AiBioGenerator() {
                 ))}
               </div>
             ) : (
-              <div className="text-center py-16 rounded-2xl border-2" style={{ borderColor: "hsl(var(--border))" }}>
+              <div className="text-center py-20 rounded-2xl border-2 border-dashed" style={{ borderColor: "hsl(var(--border))" }}>
                 <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-4" style={{ backgroundColor: "hsl(var(--primary) / 0.08)" }}>
                   <History className="w-8 h-8" style={{ color: "hsl(var(--primary))" }} />
                 </div>
-                <p className="text-muted-foreground">No generation history yet</p>
-                <p className="text-sm text-muted-foreground mt-1">Start generating to see your bios here</p>
-                <Button variant="outline" className="mt-4 gap-2" onClick={() => setActiveTab("generate")}>
+                <p className="text-muted-foreground font-medium">No generation history yet</p>
+                <p className="text-sm text-muted-foreground mt-1">Generate your first bio to see it here</p>
+                <Button variant="outline" className="mt-5 gap-2" onClick={() => setActiveTab("generate")}>
                   <Wand2 className="w-4 h-4" />
                   Generate Your First Bio
                 </Button>

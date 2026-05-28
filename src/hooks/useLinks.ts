@@ -14,6 +14,7 @@ export const useLinks = (params?: LinkQuery) => {
   return useQuery({
     queryKey: params ? ['links', params] : ['links'],
     queryFn: () => linksApi.getLinks(params),
+    refetchOnMount: true,
   });
 };
 

@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { Plus, GripVertical, Edit2, Trash2, Copy, Loader2, Search, Upload, X, ChevronRight, ExternalLink, AlertTriangle } from 'lucide-react';
 import moment from 'moment';
-import { useLinks, useCreateLink, useUpdateLink, useDeleteLink, useToggleLinkActive, useRestoreLink, useBulkOperation, useReorderLinks } from '../../hooks/useLinks';
+import { useLinks, useCreateLink, useUpdateLink, useDeleteLink, useToggleLinkActive, useRestoreLink, useReorderLinks } from '../../hooks/useLinks';
 import { useUploadFile } from '../../hooks/useStorage';
 import { useToast } from '../../hooks/use-toast';
 import { useDebounce } from '../../hooks/useDebounce';
@@ -52,9 +52,11 @@ function LinkItem({ link, onEdit, onDelete, onToggleActive, onRestore, onCopy, d
         <CardContent className="p-4">
           <div className="flex items-start gap-4">
             {/* Drag handle */}
-            <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing pt-2 opacity-50 hover:opacity-100">
-              <GripVertical className="h-5 w-5 text-muted-foreground" />
-            </div>
+            {dragHandleProps && (
+              <div {...dragHandleProps} className="cursor-grab active:cursor-grabbing pt-2 opacity-50 hover:opacity-100">
+                <GripVertical className="h-5 w-5 text-muted-foreground" />
+              </div>
+            )}
 
             {/* Link content */}
             <div className="flex-1 min-w-0">
@@ -513,20 +515,18 @@ export function LinksPage() {
   const [editingLink, setEditingLink] = useState<any>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [linkToDelete, setLinkToDelete] = useState<any>(null);
-  const [selectedLinks, setSelectedLinks] = useState<string[]>([]);
-  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
-  const [bulkAction, setBulkAction] = useState<string>('');
+
   const [sortBy, setSortBy] = useState<string>('orderIndex');
   const [sortOrder, setSortOrder] = useState<'ASC' | 'DESC'>('ASC');
   const [expandedLinkId, setExpandedLinkId] = useState<string | null>(null);
 
-   const queryParams: LinkQuery = {
+  const queryParams: LinkQuery = {
     page: 1,
     limit: 100,
     search: debouncedSearch || undefined,
     isActive: selectedStatus === 'active' ? true : selectedStatus === 'inactive' ? false : undefined,
-    sortBy: 'orderIndex',
-    sortOrder: 'ASC',
+    sortBy: sortBy,
+    sortOrder: sortOrder,
   };
 
   const { data: linksData, isLoading } = useLinks(queryParams);
@@ -539,7 +539,6 @@ export function LinksPage() {
   const deleteLink = useDeleteLink();
   const toggleLinkActive = useToggleLinkActive();
   const restoreLink = useRestoreLink();
-  const bulkOperation = useBulkOperation();
   const reorderLinks = useReorderLinks();
 
   const [isReordering, setIsReordering] = useState(false);
@@ -547,9 +546,20 @@ export function LinksPage() {
   // Handle drag end for reordering - only send to API
   const handleDragEnd = useCallback((result: any) => {
     if (!result.destination || isReordering) return;
+    if (sortBy !== 'orderIndex' || sortOrder !== 'ASC') {
+      toast({
+        title: 'Reordering not allowed',
+        description: 'You can only reorder links when sorted by "Order" in "Ascending" order.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
-    // Only invalidate and let React Query refetch - don't reorder UI locally
-    const linkOrders = links.map((link, index) => ({
+    const reorderedLinks = Array.from(links);
+    const [removed] = reorderedLinks.splice(result.source.index, 1);
+    reorderedLinks.splice(result.destination.index, 0, removed);
+
+    const linkOrders = reorderedLinks.map((link, index) => ({
       linkId: link.id,
       displayOrder: index,
     }));
@@ -558,7 +568,7 @@ export function LinksPage() {
     reorderLinks.mutate({ links: linkOrders }, {
       onSettled: () => setIsReordering(false),
     });
-  }, [links, reorderLinks, isReordering]);
+  }, [links, reorderLinks, isReordering, sortBy, sortOrder, toast]);
 
   // Toggle detail view
   const toggleExpand = useCallback((linkId: string) => {
@@ -603,14 +613,6 @@ export function LinksPage() {
   const handleCloseDialog = () => {
     setIsDialogOpen(false);
     setEditingLink(null);
-  };
-
-  const handleBulkAction = () => {
-    if (selectedLinks.length > 0 && bulkAction) {
-      bulkOperation.mutate({ linkIds: selectedLinks, action: bulkAction as any });
-      setSelectedLinks([]);
-      setBulkDialogOpen(false);
-    }
   };
 
   if (isLoading) {
@@ -685,48 +687,7 @@ export function LinksPage() {
 
       {/* Actions bar */}
       <div className="flex items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-4">
-          {selectedLinks.length > 0 && (
-            <>
-              <span className="text-sm text-muted-foreground">
-                {selectedLinks.length} selected
-              </span>
-              <AlertDialog open={bulkDialogOpen} onOpenChange={setBulkDialogOpen}>
-                <Button variant="outline" onClick={() => setBulkDialogOpen(true)}>
-                  Bulk Actions
-                </Button>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Bulk Operation</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Select an action to perform on {selectedLinks.length} links.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <div className="py-4">
-                    <Select value={bulkAction} onValueChange={setBulkAction}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select action" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="delete">Delete</SelectItem>
-                        <SelectItem value="archive">Archive</SelectItem>
-                        <SelectItem value="activate">Activate</SelectItem>
-                        <SelectItem value="deactivate">Deactivate</SelectItem>
-                        <SelectItem value="restore">Restore</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction onClick={handleBulkAction}>
-                      Apply
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            </>
-          )}
-        </div>
+        <div />
 
         <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
@@ -773,25 +734,18 @@ export function LinksPage() {
               >
                 <AnimatePresence>
                   {links.map((link, index) => (
-                    <Draggable key={link.id} draggableId={link.id} index={index}>
+                    <Draggable 
+                      key={link.id} 
+                      draggableId={link.id} 
+                      index={index}
+                      isDragDisabled={sortBy !== 'orderIndex' || sortOrder !== 'ASC'}
+                    >
                       {(provided) => (
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           className="flex items-center gap-2"
                         >
-                          <input
-                            type="checkbox"
-                            checked={selectedLinks.includes(link.id)}
-                            onChange={(e) => {
-                              if (e.target.checked) {
-                                setSelectedLinks([...selectedLinks, link.id]);
-                              } else {
-                                setSelectedLinks(selectedLinks.filter((id) => id !== link.id));
-                              }
-                            }}
-                            className="h-4 w-4"
-                          />
                           <div className="flex-1">
                             <LinkItem
                               link={link}
@@ -800,7 +754,7 @@ export function LinksPage() {
                               onToggleActive={handleToggleActive}
                               onRestore={handleRestore}
                               onCopy={handleCopy}
-                              dragHandleProps={provided.dragHandleProps}
+                              dragHandleProps={sortBy === 'orderIndex' && sortOrder === 'ASC' ? provided.dragHandleProps : undefined}
                               isExpanded={expandedLinkId === link.id}
                               onToggleExpand={() => toggleExpand(link.id)}
                             />
