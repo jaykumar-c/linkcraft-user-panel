@@ -33,6 +33,7 @@ import { Switch } from "../../components/ui/switch";
 import { copyToClipboard } from "../../lib/utils";
 import { useQuery } from "@tanstack/react-query";
 import { generateBioStream, getAiHistory, applyBioToProfile } from "../../services/ai-bio.service";
+import { getLinks } from "../../services/links.service";
 
 const TONES = [
   { value: "professional", label: "Professional", icon: BriefcaseIcon },
@@ -131,6 +132,26 @@ export function AiBioGenerator() {
   const [generatedBio, setGeneratedBio] = useState("");
   const [lastPrompt, setLastPrompt] = useState("");
   const [historyPage, setHistoryPage] = useState(1);
+  const [selectedLinkIds, setSelectedLinkIds] = useState<string[]>([]);
+  const hasAutoSelected = useRef(false);
+
+  const { data: userLinksData } = useQuery({
+    queryKey: ["user-links-for-bio"],
+    queryFn: () => getLinks({ limit: 100 }),
+    enabled: includeLinks,
+  });
+  const userLinks = userLinksData?.links || [];
+
+  useEffect(() => {
+    if (includeLinks && userLinks.length > 0 && !hasAutoSelected.current) {
+      setSelectedLinkIds(userLinks.map((l) => l.id));
+      hasAutoSelected.current = true;
+    }
+    if (!includeLinks) {
+      setSelectedLinkIds([]);
+      hasAutoSelected.current = false;
+    }
+  }, [includeLinks, userLinks]);
 
   const outputRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -162,7 +183,7 @@ export function AiBioGenerator() {
 
       try {
         await generateBioStream(
-          { customPrompt: prompt, tone, length, includeLinks },
+          { customPrompt: prompt, tone, length, includeLinks, selectedLinkIds },
           (content) => setGeneratedBio((prev) => prev + content),
           () => setIsLoading(false),
         );
@@ -172,7 +193,7 @@ export function AiBioGenerator() {
         setInput("");
       }
     },
-    [input, customPrompt, tone, length, includeLinks, isLoading],
+    [input, customPrompt, tone, length, includeLinks, selectedLinkIds, isLoading],
   );
 
   const { data: historyData, refetch: refetchHistory } = useQuery({
@@ -386,6 +407,82 @@ export function AiBioGenerator() {
                         </div>
                         <Switch checked={includeLinks} onCheckedChange={setIncludeLinks} />
                       </div>
+                      {includeLinks && userLinks.length > 0 && (
+                        <div className="ml-6 rounded-xl border" style={{ borderColor: "hsl(var(--border))" }}>
+                          <div className="flex items-center justify-between px-3 py-2 border-b" style={{ borderColor: "hsl(var(--border))" }}>
+                            <span className="text-xs text-muted-foreground">Links to include in bio</span>
+                            <span className="text-xs font-medium">{selectedLinkIds.length}/{userLinks.length}</span>
+                          </div>
+                          <div>
+                            <div
+                              className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-accent/30 transition-colors border-b border-border/30"
+                              onClick={() => {
+                                if (selectedLinkIds.length === userLinks.length) {
+                                  setSelectedLinkIds([]);
+                                } else {
+                                  setSelectedLinkIds(userLinks.map((l) => l.id));
+                                }
+                              }}
+                            >
+                              <div
+                                className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                  selectedLinkIds.length === userLinks.length
+                                    ? "bg-primary border-primary"
+                                    : selectedLinkIds.length > 0
+                                      ? "bg-primary/30 border-primary"
+                                      : "border-muted-foreground/30"
+                                }`}
+                              >
+                                {selectedLinkIds.length === userLinks.length && (
+                                  <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                  </svg>
+                                )}
+                                {selectedLinkIds.length > 0 && selectedLinkIds.length < userLinks.length && (
+                                  <div className="w-2 h-0.5 bg-white rounded" />
+                                )}
+                              </div>
+                              <span className="text-sm font-medium">
+                                {selectedLinkIds.length === userLinks.length ? "Deselect all" : "Select all"}
+                              </span>
+                            </div>
+                            {userLinks.map((link) => {
+                              const isSelected = selectedLinkIds.includes(link.id);
+                              return (
+                                <div
+                                  key={link.id}
+                                  className="flex items-center gap-2.5 px-3 py-2 cursor-pointer hover:bg-accent/30 transition-colors"
+                                  onClick={() => {
+                                    if (isSelected) {
+                                      setSelectedLinkIds((prev) => prev.filter((id) => id !== link.id));
+                                    } else {
+                                      setSelectedLinkIds((prev) => [...prev, link.id]);
+                                    }
+                                  }}
+                                >
+                                  <div
+                                    className={`w-4 h-4 rounded border-2 flex items-center justify-center shrink-0 transition-colors ${
+                                      isSelected ? "bg-primary border-primary" : "border-muted-foreground/30"
+                                    }`}
+                                  >
+                                    {isSelected && (
+                                      <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                      </svg>
+                                    )}
+                                  </div>
+                                  <span className="text-sm truncate">{link.title}</span>
+                                  {link.category && (
+                                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-muted text-muted-foreground ml-auto shrink-0">
+                                      {link.category}
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                       <div className="space-y-2">
                         <Label className="text-sm font-medium">Custom Prompt (optional)</Label>
                         <textarea

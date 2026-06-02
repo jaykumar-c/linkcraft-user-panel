@@ -157,6 +157,7 @@ export interface GenerateBioRequest {
   length?: 'short' | 'medium' | 'long';
   keywords?: string[];
   includeLinks?: boolean;
+  selectedLinkIds?: string[];
   customPrompt?: string;
 }
 

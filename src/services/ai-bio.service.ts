@@ -7,6 +7,7 @@ export const generateBioStream = async (
     tone?: string;
     length?: string;
     includeLinks?: boolean;
+    selectedLinkIds?: string[];
   },
   onChunk: (content: string) => void,
   onDone: () => void,
